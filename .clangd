@@ -5,3 +5,4 @@ CompileFlags:
     - /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
     - -std=c++11
     - -Wall
+    - -xc++-header
