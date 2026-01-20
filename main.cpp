@@ -3,9 +3,6 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <iostream>
-#include <vector>
 
 // Camera settings
 glm::vec3 cameraPos = glm::vec3(0.0f, 2.0f, 10.0f);
@@ -20,12 +17,15 @@ float lastFrame = 0.0f;
 
 // Bus state
 glm::vec3 busPos = glm::vec3(0.0f, 0.0f, 0.0f);
+float busYaw = 0.0f;
 float busSpeed = 5.0f;
 bool lightOn = true;
 float fanAngle = 0.0f;
 bool fanRotating = false;
 float doorOpen = 0.0f;
 bool doorOpening = false;
+float windowOpen = 0.0f;
+bool windowOpening = false;
 
 // Mode
 bool bevMode = false;
@@ -60,14 +60,18 @@ void processInput(GLFWwindow *window) {
     roll += 0.5f;
 
   // Bus Movement (Simulate Driving)
-  if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-    busPos.z -= busSpeed * deltaTime;
-  if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-    busPos.z += busSpeed * deltaTime;
+  if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+    busPos.x += sin(glm::radians(busYaw)) * busSpeed * deltaTime;
+    busPos.z += cos(glm::radians(busYaw)) * busSpeed * deltaTime;
+  }
+  if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+    busPos.x -= sin(glm::radians(busYaw)) * busSpeed * deltaTime;
+    busPos.z -= cos(glm::radians(busYaw)) * busSpeed * deltaTime;
+  }
   if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-    busPos.x -= busSpeed * deltaTime;
+    busYaw += 50.0f * deltaTime;
   if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-    busPos.x += busSpeed * deltaTime;
+    busYaw -= 50.0f * deltaTime;
 
   // Toggles
   static bool lPressed = false;
@@ -97,14 +101,14 @@ void processInput(GLFWwindow *window) {
   } else
     fPressed = false;
 
-  static bool bPressed = false;
+  static bool xPressed = false;
   if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS) {
-    if (!bPressed) {
+    if (!xPressed) {
       bevMode = !bevMode;
-      bPressed = true;
+      xPressed = true;
     }
   } else
-    bPressed = false;
+    xPressed = false;
 
   static bool oPressed = false;
   if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
@@ -114,6 +118,15 @@ void processInput(GLFWwindow *window) {
     }
   } else
     oPressed = false;
+
+  static bool iPressed = false;
+  if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
+    if (!iPressed) {
+      windowOpening = !windowOpening;
+      iPressed = true;
+    }
+  } else
+    iPressed = false;
 }
 
 const char *vertexShaderSource =
@@ -234,6 +247,7 @@ int main() {
     // Render Bus
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, busPos);
+    model = glm::rotate(model, glm::radians(busYaw), glm::vec3(0, 1, 0));
 
     // Body
     glm::mat4 bodyModel = glm::scale(model, glm::vec3(2.0f, 1.5f, 5.0f));
@@ -265,6 +279,32 @@ int main() {
     glUniform3fv(glGetUniformLocation(shaderProgram, "objectColor"), 1,
                  &glm::vec3(0.5f, 0.3f, 0.1f)[0]);
     door.draw(shaderProgram, dM);
+
+    // Windows (Animating)
+    if (windowOpening && windowOpen < 1.0f)
+      windowOpen += deltaTime;
+    if (!windowOpening && windowOpen > 0.0f)
+      windowOpen -= deltaTime;
+
+    glUniform3fv(glGetUniformLocation(shaderProgram, "objectColor"), 1,
+                 &glm::vec3(0.0f, 0.5f, 0.8f)[0]);
+    for (int i = 0; i < 3; i++) {
+      // Left windows
+      glm::mat4 wML =
+          glm::translate(model, glm::vec3(-1.01f, 0.3f, 1.5f - i * 1.5f));
+      wML = glm::translate(wML, glm::vec3(0.0f, windowOpen * -0.4f, 0.0f));
+      wML = glm::scale(wML, glm::vec3(0.05f, 0.6f, 1.0f));
+      windowPane.draw(shaderProgram, wML);
+
+      // Right windows
+      if (i > 0) { // Skip door area
+        glm::mat4 wMR =
+            glm::translate(model, glm::vec3(1.01f, 0.3f, 1.5f - i * 1.5f));
+        wMR = glm::translate(wMR, glm::vec3(0.0f, windowOpen * -0.4f, 0.0f));
+        wMR = glm::scale(wMR, glm::vec3(0.05f, 0.6f, 1.0f));
+        windowPane.draw(shaderProgram, wMR);
+      }
+    }
 
     // Fan (Animating)
     if (fanRotating)
