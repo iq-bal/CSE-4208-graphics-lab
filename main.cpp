@@ -316,10 +316,26 @@ int main() {
       }
     }
 
-    // Fan (Animating)
+    // Table Fan on Roof
     if (fanRotating)
       fanAngle += 500.0f * deltaTime;
-    glm::mat4 fM = glm::translate(model, glm::vec3(0.0f, 0.5f, 0.0f));
+
+    // Fan Base
+    glm::mat4 fanBaseM = glm::translate(model, glm::vec3(0.0f, 0.77f, 0.0f));
+    fanBaseM = glm::scale(fanBaseM, glm::vec3(0.4f, 0.04f, 0.4f));
+    glUniform3fv(glGetUniformLocation(shaderProgram, "objectColor"), 1,
+                 &glm::vec3(0.3f, 0.3f, 0.3f)[0]);
+    busBody.draw(shaderProgram, fanBaseM);
+
+    // Fan Stand
+    glm::mat4 fanStandM = glm::translate(model, glm::vec3(0.0f, 0.85f, 0.0f));
+    fanStandM = glm::scale(fanStandM, glm::vec3(0.05f, 0.2f, 0.05f));
+    glUniform3fv(glGetUniformLocation(shaderProgram, "objectColor"), 1,
+                 &glm::vec3(0.4f, 0.4f, 0.4f)[0]);
+    busBody.draw(shaderProgram, fanStandM);
+
+    // Fan Blades (on top of stand)
+    glm::mat4 fM = glm::translate(model, glm::vec3(0.0f, 0.95f, 0.0f));
     fM = glm::rotate(fM, glm::radians(fanAngle), glm::vec3(0, 1, 0));
     glm::mat4 fM1 = glm::scale(fM, glm::vec3(0.5f, 0.05f, 0.05f));
     glUniform3fv(glGetUniformLocation(shaderProgram, "objectColor"), 1,
