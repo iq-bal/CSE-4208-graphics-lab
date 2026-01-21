@@ -190,7 +190,7 @@ int main() {
   glDeleteShader(fragmentShader);
 
   Cube busBody(glm::vec3(0.8f, 0.8f, 0.8f));
-  Cube wheel(glm::vec3(0.1f, 0.1f, 0.1f));
+  Sphere wheel(glm::vec3(0.1f, 0.1f, 0.1f));
   Cube windowPane(glm::vec3(0.0f, 0.5f, 0.8f));
   Cube door(glm::vec3(0.5f, 0.3f, 0.1f));
   Cube fan(glm::vec3(1.0f, 1.0f, 0.0f));
@@ -271,7 +271,9 @@ int main() {
                  &glm::vec3(0.1f, 0.1f, 0.1f)[0]);
     for (int i = 0; i < 4; i++) {
       glm::mat4 wM = glm::translate(model, wheelSpecs[i]);
-      wM = glm::scale(wM, glm::vec3(0.3f, 0.5f, 0.5f));
+      wM = glm::rotate(wM, glm::radians(90.0f),
+                       glm::vec3(0.0f, 0.0f, 1.0f)); // Rotate to face outward
+      wM = glm::scale(wM, glm::vec3(0.6f, 0.3f, 0.6f));
       wheel.draw(shaderProgram, wM);
     }
 
