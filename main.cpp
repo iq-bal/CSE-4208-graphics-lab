@@ -194,6 +194,7 @@ int main() {
   Cube windowPane(glm::vec3(0.0f, 0.5f, 0.8f));
   Cube door(glm::vec3(0.5f, 0.3f, 0.1f));
   Cube fan(glm::vec3(1.0f, 1.0f, 0.0f));
+  Cube windshield(glm::vec3(0.0f, 0.7f, 0.9f));
 
   while (!glfwWindowShouldClose(window)) {
     float currentFrame = glfwGetTime();
@@ -254,6 +255,13 @@ int main() {
     glUniform3fv(glGetUniformLocation(shaderProgram, "objectColor"), 1,
                  &glm::vec3(0.8f, 0.8f, 0.8f)[0]);
     busBody.draw(shaderProgram, bodyModel);
+
+    // Windshield (Front Glass)
+    glm::mat4 wSM = glm::translate(model, glm::vec3(0.0f, 0.3f, 2.51f));
+    wSM = glm::scale(wSM, glm::vec3(1.8f, 0.8f, 0.05f));
+    glUniform3fv(glGetUniformLocation(shaderProgram, "objectColor"), 1,
+                 &glm::vec3(0.0f, 0.7f, 0.9f)[0]);
+    windshield.draw(shaderProgram, wSM);
 
     // Wheels
     glm::vec3 wheelSpecs[] = {
