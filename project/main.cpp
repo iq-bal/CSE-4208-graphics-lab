@@ -68,16 +68,12 @@ struct LanternInfo {
 };
 
 const LanternInfo lanterns[] = {
-    // Left wall lanterns (face right, +X)
-    {{-4.7f, 2.2f, 0.0f}, 1.0f},
-    {{-4.7f, 2.2f, -5.0f}, 1.0f},
-    {{-4.7f, 2.2f, -10.0f}, 1.0f},
-    {{-4.7f, 2.2f, -15.0f}, 1.0f},
-    // Right wall lanterns (face left, -X)
-    {{4.7f, 2.2f, -2.5f}, -1.0f},
-    {{4.7f, 2.2f, -7.5f}, -1.0f},
-    {{4.7f, 2.2f, -12.5f}, -1.0f},
-    {{4.7f, 2.2f, -17.5f}, -1.0f},
+    // Staggered arrangement (4 per side)
+    {{-4.75f, 2.2f, -2.5f}, 1.0f},  {{-4.75f, 2.2f, -12.5f}, 1.0f},
+    {{-4.75f, 2.2f, -22.5f}, 1.0f}, {{-4.75f, 2.2f, -32.5f}, 1.0f},
+
+    {{4.75f, 2.2f, -7.5f}, -1.0f},  {{4.75f, 2.2f, -17.5f}, -1.0f},
+    {{4.75f, 2.2f, -27.5f}, -1.0f}, {{4.75f, 2.2f, -37.5f}, -1.0f},
 };
 const int NUM_LANTERNS = 8;
 
@@ -136,6 +132,7 @@ int main() {
   mainShader.setInt("texture1", 0);
   mainShader.setInt("normalMap", 1);
   mainShader.setBool("useEmissive", false);
+  mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
 
   // Render loop
   while (!glfwWindowShouldClose(window)) {
@@ -182,8 +179,8 @@ int main() {
                          0.15f * flicker);
       mainShader.setVec3(prefix + ".specular", 0.6f, 0.4f, 0.1f);
       mainShader.setFloat(prefix + ".constant", 1.0f);
-      mainShader.setFloat(prefix + ".linear", 0.14f);
-      mainShader.setFloat(prefix + ".quadratic", 0.07f);
+      mainShader.setFloat(prefix + ".linear", 0.22f); // Sharper falloff
+      mainShader.setFloat(prefix + ".quadratic", 0.12f);
     }
     mainShader.setInt("numPointLights", NUM_LANTERNS);
 
@@ -203,62 +200,88 @@ int main() {
     // ========== DRAW SCENE ==========
     mainShader.setBool("useEmissive", false);
     mainShader.setBool("useNormalMap", false);
+    mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
 
-    // 1. Floor (textured)
+    // Draw Floor (Continuous)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, floorTexture);
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, -1.0f, -10.0f));
-    model = glm::scale(model, glm::vec3(10.0f, 0.1f, 40.0f));
+    model = glm::translate(model, glm::vec3(0.0f, -1.0f, -15.0f));
+    model = glm::scale(model, glm::vec3(10.0f, 0.1f, 50.0f));
     mainShader.setMat4("model", model);
-    mainShader.setVec3("objectColor", 0.55f, 0.45f, 0.3f);
+    mainShader.setVec3("objectColor", 0.6f, 0.55f, 0.5f);
     mainShader.setBool("useTexture", true);
+    mainShader.setVec2("uvScale", glm::vec2(5.0f, 25.0f));
     cube.draw(mainShader.ID);
 
-    // 2. Ceiling (textured – same wall texture, darker)
-    glBindTexture(GL_TEXTURE_2D, wallTexture);
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, 4.0f, -10.0f));
-    model = glm::scale(model, glm::vec3(10.0f, 0.1f, 40.0f));
-    mainShader.setMat4("model", model);
-    mainShader.setVec3("objectColor", 0.5f, 0.4f, 0.28f);
-    cube.draw(mainShader.ID);
+    // Segmented Walls, Ceiling, and Dividers
+    for (int i = 0; i < 10; i++) {
+      float zPos = -i * 5.0f;
 
-    // 3. Walls (textured with hieroglyphic wall texture)
-    // Left wall
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(-5.0f, 1.5f, -10.0f));
-    model = glm::scale(model, glm::vec3(0.2f, 5.0f, 40.0f));
-    mainShader.setMat4("model", model);
-    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
-    cube.draw(mainShader.ID);
-    // Right wall
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(5.0f, 1.5f, -10.0f));
-    model = glm::scale(model, glm::vec3(0.2f, 5.0f, 40.0f));
-    mainShader.setMat4("model", model);
-    cube.draw(mainShader.ID);
+      // --- 1. Vertical Dividers (Wall Columns) ---
+      mainShader.setBool("useTexture", false);
+      mainShader.setVec3("objectColor", 0.65f, 0.55f, 0.4f);
+      // Left Divider
+      model = glm::mat4(1.0f);
+      model = glm::translate(model, glm::vec3(-4.85f, 1.5f, zPos));
+      model = glm::scale(model, glm::vec3(0.35f, 5.0f, 0.5f));
+      mainShader.setMat4("model", model);
+      cube.draw(mainShader.ID);
+      // Right Divider
+      model = glm::mat4(1.0f);
+      model = glm::translate(model, glm::vec3(4.85f, 1.5f, zPos));
+      model = glm::scale(model, glm::vec3(0.35f, 5.0f, 0.5f));
+      mainShader.setMat4("model", model);
+      cube.draw(mainShader.ID);
 
-    // Back wall (close off the corridor end)
+      // --- 2. Ceiling Beams ---
+      model = glm::mat4(1.0f);
+      model = glm::translate(model, glm::vec3(0.0f, 3.85f, zPos));
+      model = glm::scale(model, glm::vec3(10.0f, 0.35f, 0.5f));
+      mainShader.setMat4("model", model);
+      cube.draw(mainShader.ID);
+
+      // --- 3. Wall Panels (between dividers) ---
+      mainShader.setBool("useTexture", true);
+      glBindTexture(GL_TEXTURE_2D, wallTexture);
+      mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
+      mainShader.setVec2("uvScale", glm::vec2(0.8f, 1.0f)); // Large figures
+
+      // Left Panel
+      model = glm::mat4(1.0f);
+      model = glm::translate(model, glm::vec3(-5.0f, 1.5f, zPos - 2.5f));
+      model = glm::scale(model, glm::vec3(0.2f, 5.0f, 4.5f));
+      mainShader.setMat4("model", model);
+      cube.draw(mainShader.ID);
+      // Right Panel
+      model = glm::mat4(1.0f);
+      model = glm::translate(model, glm::vec3(5.0f, 1.5f, zPos - 2.5f));
+      model = glm::scale(model, glm::vec3(0.2f, 5.0f, 4.5f));
+      mainShader.setMat4("model", model);
+      cube.draw(mainShader.ID);
+
+      // --- 4. Ceiling Panels ---
+      model = glm::mat4(1.0f);
+      model = glm::translate(model, glm::vec3(0.0f, 4.05f, zPos - 2.5f));
+      model = glm::scale(model, glm::vec3(10.0f, 0.1f, 4.5f));
+      mainShader.setMat4("model", model);
+      mainShader.setVec3("objectColor", 0.45f, 0.35f, 0.25f);
+      cube.draw(mainShader.ID);
+    }
+
+    // Back wall
+    mainShader.setBool("useTexture", true);
     model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, 1.5f, -30.0f));
+    model = glm::translate(model, glm::vec3(0.0f, 1.5f, -50.0f));
     model = glm::scale(model, glm::vec3(10.0f, 5.0f, 0.2f));
     mainShader.setMat4("model", model);
+    mainShader.setVec2("uvScale", glm::vec2(2.0f, 1.0f));
     cube.draw(mainShader.ID);
 
     mainShader.setBool("useTexture", false);
+    mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
 
-    // 4. Pillars (sandstone color, no texture for contrast)
-    mainShader.setVec3("objectColor", 0.65f, 0.55f, 0.35f);
-    for (int i = 0; i < 6; i++) {
-      glm::mat4 pm = glm::mat4(1.0f);
-      pm = glm::translate(pm, glm::vec3(-4.0f, 0.0f, -i * 5.0f));
-      drawPillar(mainShader, cube, pm);
-
-      pm = glm::mat4(1.0f);
-      pm = glm::translate(pm, glm::vec3(4.0f, 0.0f, -i * 5.0f));
-      drawPillar(mainShader, cube, pm);
-    }
+    // 4. Pillars removed (as requested)
 
     // 5. Wall-mounted Lanterns
     for (int i = 0; i < NUM_LANTERNS; i++) {

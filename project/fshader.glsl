@@ -34,7 +34,7 @@ in vec3 Normal;
 in mat3 TBN;
 
 uniform int numPointLights;
-uniform PointLight pointLights[10]; // Max 10 lights
+uniform PointLight pointLights[16]; // Increased limit to 16 lights
 uniform SpotLight spotLight;
 uniform bool spotLightOn;
 
@@ -49,6 +49,8 @@ uniform bool useNormalMap;
 uniform bool useEmissive;
 uniform vec3 emissiveColor;
 
+uniform vec2 uvScale;
+
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 color);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 color);
 
@@ -61,8 +63,9 @@ void main()
     }
 
     vec3 norm = normalize(Normal);
+    vec2 scaledTexCoords = TexCoords * uvScale;
     if (useNormalMap) {
-        norm = texture(normalMap, TexCoords).rgb;
+        norm = texture(normalMap, scaledTexCoords).rgb;
         norm = norm * 2.0 - 1.0;   
         norm = normalize(TBN * norm);
     }
@@ -71,7 +74,7 @@ void main()
     
     vec3 baseColor = objectColor;
     if (useTexture) {
-        baseColor = texture(texture1, TexCoords).rgb;
+        baseColor = texture(texture1, scaledTexCoords).rgb;
     }
     
     vec3 result = vec3(0.0);
