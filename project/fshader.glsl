@@ -45,11 +45,21 @@ uniform sampler2D texture1;
 uniform sampler2D normalMap;
 uniform bool useNormalMap;
 
+// Emissive support for self-lit objects (lantern flames)
+uniform bool useEmissive;
+uniform vec3 emissiveColor;
+
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 color);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 color);
 
 void main()
 {
+    // Emissive objects bypass lighting entirely
+    if (useEmissive) {
+        FragColor = vec4(emissiveColor, 1.0);
+        return;
+    }
+
     vec3 norm = normalize(Normal);
     if (useNormalMap) {
         norm = texture(normalMap, TexCoords).rgb;

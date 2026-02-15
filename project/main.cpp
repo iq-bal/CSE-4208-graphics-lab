@@ -58,7 +58,28 @@ void drawBladeTrap(Shader &shader, Cube &cube, Cylinder &cyl,
 void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
                      float slideAmount);
 void drawPillar(Shader &shader, Cube &cube, glm::mat4 model);
-void drawTorch(Shader &shader, Cube &cube, glm::mat4 model);
+void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model);
+
+// Lantern positions: 4 per side, alternating along Z
+struct LanternInfo {
+  glm::vec3 position;
+  float facingX; // +1.0 for right-facing (on left wall), -1.0 for left-facing
+                 // (on right wall)
+};
+
+const LanternInfo lanterns[] = {
+    // Left wall lanterns (face right, +X)
+    {{-4.7f, 2.2f, 0.0f}, 1.0f},
+    {{-4.7f, 2.2f, -5.0f}, 1.0f},
+    {{-4.7f, 2.2f, -10.0f}, 1.0f},
+    {{-4.7f, 2.2f, -15.0f}, 1.0f},
+    // Right wall lanterns (face left, -X)
+    {{4.7f, 2.2f, -2.5f}, -1.0f},
+    {{4.7f, 2.2f, -7.5f}, -1.0f},
+    {{4.7f, 2.2f, -12.5f}, -1.0f},
+    {{4.7f, 2.2f, -17.5f}, -1.0f},
+};
+const int NUM_LANTERNS = 8;
 
 int main() {
   // glfw: initialize and configure
@@ -106,14 +127,15 @@ int main() {
   Cube cube;
   Cylinder cylinder(36);
 
-  // Textures (Mock or Real)
-  // unsigned int diffuseMap = loadTexture("container2.png");
-  // unsigned int specularMap = loadTexture("container2_specular.png");
+  // Load textures
+  unsigned int wallTexture = loadTexture("resources/wall_texture.png");
+  unsigned int floorTexture = loadTexture("resources/floor_texture.png");
 
   // Shader config
   mainShader.use();
   mainShader.setInt("texture1", 0);
   mainShader.setInt("normalMap", 1);
+  mainShader.setBool("useEmissive", false);
 
   // Render loop
   while (!glfwWindowShouldClose(window)) {
@@ -146,77 +168,89 @@ int main() {
     mainShader.setMat4("view", view);
     mainShader.setVec3("viewPos", camera.Position);
 
-    // Lighting
-    // Torch 1
-    mainShader.setVec3("pointLights[0].position", 0.0f, 2.0f, -2.0f);
-    mainShader.setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
-    mainShader.setVec3("pointLights[0].diffuse", 1.0f, 0.6f,
-                       0.2f); // Fire Color
-    mainShader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
-    mainShader.setFloat("pointLights[0].constant", 1.0f);
-    mainShader.setFloat("pointLights[0].linear", 0.09f);
-    mainShader.setFloat("pointLights[0].quadratic", 0.032f);
+    // ========== LIGHTING ==========
+    // 8 lantern point lights with warm fire color
+    for (int i = 0; i < NUM_LANTERNS; i++) {
+      std::string prefix = "pointLights[" + std::to_string(i) + "]";
+      // Slight flicker effect
+      float flicker = 0.9f + 0.1f * sin(currentFrame * 8.0f + i * 1.7f);
+      mainShader.setVec3(prefix + ".position",
+                         lanterns[i].position +
+                             glm::vec3(lanterns[i].facingX * 0.3f, 0.3f, 0.0f));
+      mainShader.setVec3(prefix + ".ambient", 0.06f, 0.04f, 0.02f);
+      mainShader.setVec3(prefix + ".diffuse", 1.0f * flicker, 0.55f * flicker,
+                         0.15f * flicker);
+      mainShader.setVec3(prefix + ".specular", 0.6f, 0.4f, 0.1f);
+      mainShader.setFloat(prefix + ".constant", 1.0f);
+      mainShader.setFloat(prefix + ".linear", 0.14f);
+      mainShader.setFloat(prefix + ".quadratic", 0.07f);
+    }
+    mainShader.setInt("numPointLights", NUM_LANTERNS);
 
-    // Sarcophagus Glow (Light 2)
-    mainShader.setVec3("pointLights[1].position", 0.0f, 1.0f, -15.0f);
-    mainShader.setVec3("pointLights[1].ambient", 0.0f, 0.0f, 0.0f);
-    mainShader.setVec3("pointLights[1].diffuse", 0.0f, 0.2f,
-                       0.8f); // Blue Mystical
-    mainShader.setVec3("pointLights[1].specular", 0.5f, 0.5f, 0.5f);
-    mainShader.setFloat("pointLights[1].constant", 1.0f);
-    mainShader.setFloat("pointLights[1].linear", 0.22f);
-    mainShader.setFloat("pointLights[1].quadratic", 0.20f);
-
-    mainShader.setInt("numPointLights", 2);
-
-    // SpotLight (Flashlight)
+    // SpotLight (Flashlight) – dim for atmosphere
     mainShader.setVec3("spotLight.position", camera.Position);
     mainShader.setVec3("spotLight.direction", camera.Front);
     mainShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
-    mainShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
-    mainShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+    mainShader.setVec3("spotLight.diffuse", 0.4f, 0.35f, 0.25f); // Dim warm
+    mainShader.setVec3("spotLight.specular", 0.3f, 0.3f, 0.3f);
     mainShader.setFloat("spotLight.constant", 1.0f);
-    mainShader.setFloat("spotLight.linear", 0.09f);
-    mainShader.setFloat("spotLight.quadratic", 0.032f);
-    mainShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
-    mainShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
-    mainShader.setBool("spotLightOn", true); // Always on for exploration
+    mainShader.setFloat("spotLight.linear", 0.14f);
+    mainShader.setFloat("spotLight.quadratic", 0.07f);
+    mainShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(14.0f)));
+    mainShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(18.0f)));
+    mainShader.setBool("spotLightOn", true);
 
-    // --- DRAW SCENE ---
+    // ========== DRAW SCENE ==========
+    mainShader.setBool("useEmissive", false);
+    mainShader.setBool("useNormalMap", false);
 
-    // 1. Floor
+    // 1. Floor (textured)
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, floorTexture);
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, -1.0f, -5.0f));
-    model = glm::scale(model, glm::vec3(10.0f, 0.1f, 30.0f));
+    model = glm::translate(model, glm::vec3(0.0f, -1.0f, -10.0f));
+    model = glm::scale(model, glm::vec3(10.0f, 0.1f, 40.0f));
     mainShader.setMat4("model", model);
-    mainShader.setVec3("objectColor", 0.4f, 0.4f, 0.4f); // Grey Stone
-    mainShader.setBool("useTexture", false);             // For now
+    mainShader.setVec3("objectColor", 0.55f, 0.45f, 0.3f);
+    mainShader.setBool("useTexture", true);
     cube.draw(mainShader.ID);
 
-    // 2. Ceiling
+    // 2. Ceiling (textured – same wall texture, darker)
+    glBindTexture(GL_TEXTURE_2D, wallTexture);
     model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, 4.0f, -5.0f));
-    model = glm::scale(model, glm::vec3(10.0f, 0.1f, 30.0f));
+    model = glm::translate(model, glm::vec3(0.0f, 4.0f, -10.0f));
+    model = glm::scale(model, glm::vec3(10.0f, 0.1f, 40.0f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.5f, 0.4f, 0.28f);
+    cube.draw(mainShader.ID);
+
+    // 3. Walls (textured with hieroglyphic wall texture)
+    // Left wall
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-5.0f, 1.5f, -10.0f));
+    model = glm::scale(model, glm::vec3(0.2f, 5.0f, 40.0f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
+    cube.draw(mainShader.ID);
+    // Right wall
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(5.0f, 1.5f, -10.0f));
+    model = glm::scale(model, glm::vec3(0.2f, 5.0f, 40.0f));
     mainShader.setMat4("model", model);
     cube.draw(mainShader.ID);
 
-    // 3. Walls (Simple Corridor)
-    // Left
+    // Back wall (close off the corridor end)
     model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(-5.0f, 1.5f, -5.0f));
-    model = glm::scale(model, glm::vec3(0.2f, 5.0f, 30.0f));
-    mainShader.setMat4("model", model);
-    mainShader.setVec3("objectColor", 0.6f, 0.5f, 0.3f); // Sandstone
-    cube.draw(mainShader.ID);
-    // Right
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(5.0f, 1.5f, -5.0f));
-    model = glm::scale(model, glm::vec3(0.2f, 5.0f, 30.0f));
+    model = glm::translate(model, glm::vec3(0.0f, 1.5f, -30.0f));
+    model = glm::scale(model, glm::vec3(10.0f, 5.0f, 0.2f));
     mainShader.setMat4("model", model);
     cube.draw(mainShader.ID);
 
-    // 4. Pillars
-    for (int i = 0; i < 5; i++) {
+    mainShader.setBool("useTexture", false);
+
+    // 4. Pillars (sandstone color, no texture for contrast)
+    mainShader.setVec3("objectColor", 0.65f, 0.55f, 0.35f);
+    for (int i = 0; i < 6; i++) {
       glm::mat4 pm = glm::mat4(1.0f);
       pm = glm::translate(pm, glm::vec3(-4.0f, 0.0f, -i * 5.0f));
       drawPillar(mainShader, cube, pm);
@@ -226,15 +260,24 @@ int main() {
       drawPillar(mainShader, cube, pm);
     }
 
-    // 5. Blade Trap (Hierarchical)
+    // 5. Wall-mounted Lanterns
+    for (int i = 0; i < NUM_LANTERNS; i++) {
+      glm::mat4 lm = glm::mat4(1.0f);
+      lm = glm::translate(lm, lanterns[i].position);
+      // Scale facing direction
+      lm = glm::scale(lm, glm::vec3(lanterns[i].facingX, 1.0f, 1.0f));
+      drawLantern(mainShader, cube, cylinder, lm);
+    }
+
+    // 6. Blade Trap (Hierarchical)
     glm::mat4 trapPos = glm::mat4(1.0f);
     trapPos =
         glm::translate(trapPos, glm::vec3(0.0f, 3.5f, -8.0f)); // Ceiling mount
     drawBladeTrap(mainShader, cube, cylinder, trapPos, bladeTime);
 
-    // 6. Sarcophagus (Hierarchical + Interactive)
+    // 7. Sarcophagus (Hierarchical + Interactive)
     glm::mat4 sarcPos = glm::mat4(1.0f);
-    sarcPos = glm::translate(sarcPos, glm::vec3(0.0f, -0.5f, -15.0f));
+    sarcPos = glm::translate(sarcPos, glm::vec3(0.0f, -0.5f, -20.0f));
     drawSarcophagus(mainShader, cube, sarcPos, sarcophagusSlide);
 
     glfwSwapBuffers(window);
@@ -261,7 +304,7 @@ void processInput(GLFWwindow *window) {
 
   // Interaction
   if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-    float dist = glm::length(camera.Position - glm::vec3(0.0f, 0.0f, -15.0f));
+    float dist = glm::length(camera.Position - glm::vec3(0.0f, 0.0f, -20.0f));
     if (dist < 5.0f) {
       sarcophagusInteract = true;
       sarcophagusOpen = !sarcophagusOpen; // Toggle
@@ -363,6 +406,47 @@ void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
   shader.setMat4("model", lid);
   shader.setVec3("objectColor", 0.9f, 0.8f, 0.3f); // Brighter Gold
   cube.draw(shader.ID);
+}
+
+void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model) {
+  // Wall bracket (dark iron)
+  shader.setBool("useEmissive", false);
+  glm::mat4 bracket = glm::translate(model, glm::vec3(0.15f, 0.0f, 0.0f));
+  bracket = glm::scale(bracket, glm::vec3(0.3f, 0.08f, 0.08f));
+  shader.setMat4("model", bracket);
+  shader.setVec3("objectColor", 0.15f, 0.12f, 0.08f); // Dark iron
+  cube.draw(shader.ID);
+
+  // Vertical stick / torch handle
+  glm::mat4 stick = glm::translate(model, glm::vec3(0.3f, 0.0f, 0.0f));
+  stick = glm::scale(stick, glm::vec3(0.05f, 0.6f, 0.05f));
+  shader.setMat4("model", stick);
+  shader.setVec3("objectColor", 0.25f, 0.18f, 0.1f); // Wood brown
+  cube.draw(shader.ID);
+
+  // Torch cup / holder at top
+  glm::mat4 cup = glm::translate(model, glm::vec3(0.3f, 0.3f, 0.0f));
+  cup = glm::scale(cup, glm::vec3(0.15f, 0.1f, 0.15f));
+  shader.setMat4("model", cup);
+  shader.setVec3("objectColor", 0.2f, 0.15f, 0.08f); // Dark metal
+  cube.draw(shader.ID);
+
+  // Flame (emissive – glows bright orange-yellow)
+  shader.setBool("useEmissive", true);
+  shader.setVec3("emissiveColor", 1.0f, 0.7f, 0.2f); // Bright fire
+  glm::mat4 flame = glm::translate(model, glm::vec3(0.3f, 0.45f, 0.0f));
+  flame = glm::scale(flame, glm::vec3(0.1f, 0.18f, 0.1f));
+  shader.setMat4("model", flame);
+  cube.draw(shader.ID);
+
+  // Outer flame glow (larger, dimmer)
+  shader.setVec3("emissiveColor", 0.9f, 0.45f, 0.05f); // Deeper orange
+  glm::mat4 glow = glm::translate(model, glm::vec3(0.3f, 0.5f, 0.0f));
+  glow = glm::scale(glow, glm::vec3(0.15f, 0.12f, 0.15f));
+  shader.setMat4("model", glow);
+  cube.draw(shader.ID);
+
+  shader.setBool("useEmissive", false);
 }
 
 unsigned int loadTexture(const char *path) {
