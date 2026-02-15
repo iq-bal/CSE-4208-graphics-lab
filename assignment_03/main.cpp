@@ -24,12 +24,18 @@ float lastFrame = 0.0f;
 glm::vec3 busPos = glm::vec3(0.0f, 0.0f, 0.0f);
 float busYaw = 0.0f;
 float busSpeed = 5.0f;
-float fanAngle = 0.0f;
-bool fanRotating = false;
 float doorOpen = 0.0f;
 bool doorOpening = false;
 float windowOpen = 0.0f;
 bool windowOpening = false;
+
+// Light Positions (Shared between Physics and Rendering)
+const glm::vec3 pointLightOffsets[] = {
+    glm::vec3(0.0f, 0.6f, 1.5f),  // Front Ceiling (Inside)
+    glm::vec3(0.0f, 0.6f, 0.0f),  // Middle Ceiling (Inside)
+    glm::vec3(0.0f, 0.6f, -1.5f), // Back Ceiling (Inside)
+    glm::vec3(0.0f, 0.6f, 0.75f)  // Extra Mid-Front (Inside)
+};
 
 // Lighting Toggles (Global State)
 bool dirLightOn = true;
@@ -200,14 +206,6 @@ void processInput(GLFWwindow *window) {
     key7Pressed = false;
 
   // Bus controls
-  static bool gPressed = false;
-  if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
-    if (!gPressed) {
-      fanRotating = !fanRotating;
-      gPressed = true;
-    }
-  } else
-    gPressed = false;
   static bool oPressed = false;
   if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
     if (!oPressed) {
@@ -285,7 +283,8 @@ glm::mat4 GetViewMatrix(CameraMode mode) {
 }
 
 void renderScene(unsigned int shaderProgram, Cube &busBody, Sphere &wheel,
-                 Cube &windowPane, Cube &door, Cube &fan, Cube &windshield) {
+                 Cube &windowPane, Cube &door, Cube &windshield,
+                 bool isEmissiveOn) {
   // --- STATIC ENVIRONMENT (ROAD) ---
   // Drawn first, unaffected by bus position
   glm::mat4 roadModel = glm::mat4(1.0f);
@@ -306,17 +305,10 @@ void renderScene(unsigned int shaderProgram, Cube &busBody, Sphere &wheel,
   glm::vec3 windowColor(0.0f, 0.5f, 0.8f);
   glm::vec3 tireColor(0.1f, 0.1f, 0.1f);
   glm::vec3 doorColor(0.5f, 0.3f, 0.1f);
-  glm::vec3 fanColor(1.0f, 1.0f, 0.0f);
   glm::vec3 seatColor(0.2f, 0.2f, 0.8f);
 
   // --- INTERIOR LIGHT BULBS ---
-  // Drawn relative to bus so they move with it
-  glm::vec3 lightOffsets[] = {
-      glm::vec3(0.0f, 0.6f, 1.5f),  // Front Ceiling (Inside)
-      glm::vec3(0.0f, 0.6f, 0.0f),  // Middle Ceiling (Inside)
-      glm::vec3(0.0f, 0.6f, -1.5f), // Back Ceiling (Inside)
-      glm::vec3(0.0f, 0.6f, 0.75f)  // Extra Mid-Front (Inside)
-  };
+  // Drawn relative to bus so they move with it (using global PointLightOffsets)
 
   // Temporarily enable emissive for bulbs so they glow
   glUniform1i(glGetUniformLocation(shaderProgram, "emissiveOn"), true);
@@ -329,25 +321,23 @@ void renderScene(unsigned int shaderProgram, Cube &busBody, Sphere &wheel,
     glUniform3fv(glGetUniformLocation(shaderProgram, "objectColor"), 1,
                  &glm::vec3(0.2f, 0.2f, 0.2f)[0]); // Dark Metal
     glm::mat4 fixtureM = glm::translate(
-        model, glm::vec3(lightOffsets[i].x, 0.65f,
-                         lightOffsets[i].z)); // Start slightly above bulb
+        model, glm::vec3(pointLightOffsets[i].x, 0.65f,
+                         pointLightOffsets[i].z)); // Start slightly above bulb
     fixtureM = glm::scale(fixtureM, glm::vec3(0.02f, 0.1f, 0.02f)); // Thin stem
     busBody.draw(shaderProgram, fixtureM);
 
     // 2. Bulb (Sphere) - Standard Emission
-    glUniform1i(glGetUniformLocation(shaderProgram, "emissiveOn"), true);
+    // Toggleable by Key 4 (passed as isEmissiveOn)
+    glUniform1i(glGetUniformLocation(shaderProgram, "emissiveOn"),
+                isEmissiveOn);
     glUniform3fv(glGetUniformLocation(shaderProgram, "objectColor"), 1,
                  &glm::vec3(1.0f, 0.9f, 0.7f)[0]);
 
-    glm::mat4 bulbM = glm::translate(model, lightOffsets[i]);
+    glm::mat4 bulbM = glm::translate(model, pointLightOffsets[i]);
     bulbM = glm::scale(bulbM, glm::vec3(0.08f, 0.08f, 0.08f)); // Small sphere
     wheel.draw(shaderProgram, bulbM);
   }
-  // Turn back off if it wasn't supposed to be on generally (safest bet),
-  // but better: just let the next objectColor set define it.
-  // Emissive logic in main loop resets 'locEmit' before renderScene, but inside
-  // renderScene we persist state. So we MUST disable it after drawing bulbs to
-  // avoid making the floor glowing next!
+  // Turn back off for safety
   glUniform1i(glGetUniformLocation(shaderProgram, "emissiveOn"), false);
 
   // --- HOLLOW BUS BODY CONSTRUCTION ---
@@ -588,15 +578,20 @@ int main() {
     glUniform3fv(glGetUniformLocation(shaderProgram, "dirLight.specular"), 1,
                  &glm::vec3(0.5f, 0.5f, 0.5f)[0]);
 
-    glm::vec3 pointLightPositions[] = {
-        glm::vec3(0.7f, 0.2f, 2.0f), glm::vec3(2.3f, -3.3f, -4.0f),
-        glm::vec3(-4.0f, 2.0f, -12.0f), glm::vec3(0.0f, 0.0f, -3.0f)};
+    // Dynamic Point Lights (Attached to Bus Interior)
+    glm::mat4 busModel = glm::mat4(1.0f);
+    busModel = glm::translate(busModel, busPos);
+    busModel = glm::rotate(busModel, glm::radians(busYaw), glm::vec3(0, 1, 0));
+
     for (int i = 0; i < 4; i++) {
+      // Calculate World Position of this bulb
+      glm::vec4 worldPos = busModel * glm::vec4(pointLightOffsets[i], 1.0f);
+
       std::string number = std::to_string(i);
       glUniform3fv(
           glGetUniformLocation(
               shaderProgram, ("pointLights[" + number + "].position").c_str()),
-          1, &pointLightPositions[i][0]);
+          1, &glm::vec3(worldPos)[0]);
       glUniform3fv(
           glGetUniformLocation(shaderProgram,
                                ("pointLights[" + number + "].ambient").c_str()),
@@ -626,23 +621,30 @@ int main() {
           0.032f);
     }
 
+    // Dynamic Spotlight (Headlights)
+    float yawRad = glm::radians(busYaw);
+    glm::vec3 busForward(sin(yawRad), 0.0f, cos(yawRad));
+    glm::vec3 headlightPos = busPos + (busForward * 2.4f) +
+                             glm::vec3(0.0f, -0.2f, 0.0f); // Front bumper
+
     glUniform3fv(glGetUniformLocation(shaderProgram, "spotLight.position"), 1,
-                 &cameraPos[0]);
+                 &headlightPos[0]);
     glUniform3fv(glGetUniformLocation(shaderProgram, "spotLight.direction"), 1,
-                 &cameraFront[0]);
+                 &busForward[0]);
     glUniform3fv(glGetUniformLocation(shaderProgram, "spotLight.ambient"), 1,
                  &glm::vec3(0.0f, 0.0f, 0.0f)[0]);
     glUniform3fv(glGetUniformLocation(shaderProgram, "spotLight.diffuse"), 1,
-                 &glm::vec3(1.0f, 1.0f, 1.0f)[0]);
+                 &glm::vec3(1.0f, 1.0f, 0.8f)[0]); // Headlight Yellowish
     glUniform3fv(glGetUniformLocation(shaderProgram, "spotLight.specular"), 1,
                  &glm::vec3(1.0f, 1.0f, 1.0f)[0]);
     glUniform1f(glGetUniformLocation(shaderProgram, "spotLight.constant"),
                 1.0f);
-    glUniform1f(glGetUniformLocation(shaderProgram, "spotLight.linear"), 0.09f);
+    glUniform1f(glGetUniformLocation(shaderProgram, "spotLight.linear"),
+                0.045f);
     glUniform1f(glGetUniformLocation(shaderProgram, "spotLight.quadratic"),
-                0.032f);
+                0.0075f);
     glUniform1f(glGetUniformLocation(shaderProgram, "spotLight.cutOff"),
-                glm::cos(glm::radians(12.5f)));
+                glm::cos(glm::radians(25.5f)));
 
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
@@ -764,8 +766,8 @@ int main() {
       glUniform3fv(glGetUniformLocation(shaderProgram, "viewPos"), 1,
                    &viewPos[0]);
 
-      renderScene(shaderProgram, busBody, wheel, windowPane, door, fan,
-                  windshield);
+      renderScene(shaderProgram, busBody, wheel, windowPane, door, windshield,
+                  locEmit);
     }
 
     glfwSwapBuffers(window);
