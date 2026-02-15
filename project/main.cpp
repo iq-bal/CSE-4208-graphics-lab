@@ -57,8 +57,8 @@ void drawBladeTrap(Shader &shader, Cube &cube, Cylinder &cyl,
                    glm::mat4 parentModel, float time);
 void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
                      float slideAmount);
-void drawPillar(Shader &shader, Cube &cube, glm::mat4 model);
-void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model);
+void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
+                 float time);
 
 // Lantern positions: 4 per side, alternating along Z
 struct LanternInfo {
@@ -126,6 +126,7 @@ int main() {
   // Load textures
   unsigned int wallTexture = loadTexture("resources/wall_texture.png");
   unsigned int floorTexture = loadTexture("resources/floor_texture.png");
+  unsigned int pillarTexture = loadTexture("resources/pillar_texture.png");
 
   // Shader config
   mainShader.use();
@@ -219,8 +220,10 @@ int main() {
       float zPos = -i * 5.0f;
 
       // --- 1. Vertical Dividers (Wall Columns) ---
-      mainShader.setBool("useTexture", false);
+      mainShader.setBool("useTexture", true);
+      glBindTexture(GL_TEXTURE_2D, pillarTexture);
       mainShader.setVec3("objectColor", 0.65f, 0.55f, 0.4f);
+      mainShader.setVec2("uvScale", glm::vec2(1.0f, 5.0f)); // Vertical grooves
       // Left Divider
       model = glm::mat4(1.0f);
       model = glm::translate(model, glm::vec3(-4.85f, 1.5f, zPos));
@@ -260,12 +263,14 @@ int main() {
       mainShader.setMat4("model", model);
       cube.draw(mainShader.ID);
 
-      // --- 4. Ceiling Panels ---
+      // --- 4. Ceiling Panels (Now using floor_texture as requested) ---
+      glBindTexture(GL_TEXTURE_2D, floorTexture);
       model = glm::mat4(1.0f);
       model = glm::translate(model, glm::vec3(0.0f, 4.05f, zPos - 2.5f));
       model = glm::scale(model, glm::vec3(10.0f, 0.1f, 4.5f));
       mainShader.setMat4("model", model);
       mainShader.setVec3("objectColor", 0.45f, 0.35f, 0.25f);
+      mainShader.setVec2("uvScale", glm::vec2(2.0f, 2.0f));
       cube.draw(mainShader.ID);
     }
 
@@ -289,7 +294,7 @@ int main() {
       lm = glm::translate(lm, lanterns[i].position);
       // Scale facing direction
       lm = glm::scale(lm, glm::vec3(lanterns[i].facingX, 1.0f, 1.0f));
-      drawLantern(mainShader, cube, cylinder, lm);
+      drawLantern(mainShader, cube, cylinder, lm, currentFrame);
     }
 
     // 6. Blade Trap (Hierarchical)
@@ -431,44 +436,89 @@ void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
   cube.draw(shader.ID);
 }
 
-void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model) {
-  // Wall bracket (dark iron)
+void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
+                 float time) {
+  // 1. Wall bracket — extends straight out from wall (no rotation)
   shader.setBool("useEmissive", false);
-  glm::mat4 bracket = glm::translate(model, glm::vec3(0.15f, 0.0f, 0.0f));
-  bracket = glm::scale(bracket, glm::vec3(0.3f, 0.08f, 0.08f));
+  shader.setVec3("objectColor", 0.12f, 0.1f, 0.08f);
+
+  // Horizontal arm
+  glm::mat4 bracket = glm::translate(model, glm::vec3(0.2f, 0.0f, 0.0f));
+  bracket = glm::scale(bracket, glm::vec3(0.4f, 0.06f, 0.06f));
   shader.setMat4("model", bracket);
-  shader.setVec3("objectColor", 0.15f, 0.12f, 0.08f); // Dark iron
   cube.draw(shader.ID);
 
-  // Vertical stick / torch handle
-  glm::mat4 stick = glm::translate(model, glm::vec3(0.3f, 0.0f, 0.0f));
-  stick = glm::scale(stick, glm::vec3(0.05f, 0.6f, 0.05f));
-  shader.setMat4("model", stick);
-  shader.setVec3("objectColor", 0.25f, 0.18f, 0.1f); // Wood brown
-  cube.draw(shader.ID);
+  // 2. Torch handle — vertical, at end of bracket
+  glm::mat4 torchBase = glm::translate(model, glm::vec3(0.4f, 0.0f, 0.0f));
 
-  // Torch cup / holder at top
-  glm::mat4 cup = glm::translate(model, glm::vec3(0.3f, 0.3f, 0.0f));
-  cup = glm::scale(cup, glm::vec3(0.15f, 0.1f, 0.15f));
-  shader.setMat4("model", cup);
-  shader.setVec3("objectColor", 0.2f, 0.15f, 0.08f); // Dark metal
-  cube.draw(shader.ID);
+  glm::mat4 handleGeom =
+      glm::translate(torchBase, glm::vec3(0.0f, 0.15f, 0.0f));
+  handleGeom = glm::scale(handleGeom, glm::vec3(0.05f, 0.5f, 0.05f));
+  shader.setMat4("model", handleGeom);
+  shader.setVec3("objectColor", 0.3f, 0.2f, 0.1f);
+  cyl.draw(shader.ID);
 
-  // Flame (emissive – glows bright orange-yellow)
+  // 3. Metal cup at top — holds the fire
+  glm::mat4 cup = glm::translate(torchBase, glm::vec3(0.0f, 0.4f, 0.0f));
+
+  glm::mat4 cupGeom = glm::scale(cup, glm::vec3(0.1f, 0.08f, 0.1f));
+  shader.setMat4("model", cupGeom);
+  shader.setVec3("objectColor", 0.15f, 0.12f, 0.1f);
+  cyl.draw(shader.ID);
+
+  // 4. FIRE — additive blending for realistic glow-through
   shader.setBool("useEmissive", true);
-  shader.setVec3("emissiveColor", 1.0f, 0.7f, 0.2f); // Bright fire
-  glm::mat4 flame = glm::translate(model, glm::vec3(0.3f, 0.45f, 0.0f));
-  flame = glm::scale(flame, glm::vec3(0.1f, 0.18f, 0.1f));
-  shader.setMat4("model", flame);
-  cube.draw(shader.ID);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Additive blending
+  glDepthMask(GL_FALSE);             // Don't write depth for transparent fire
 
-  // Outer flame glow (larger, dimmer)
-  shader.setVec3("emissiveColor", 0.9f, 0.45f, 0.05f); // Deeper orange
-  glm::mat4 glow = glm::translate(model, glm::vec3(0.3f, 0.5f, 0.0f));
-  glow = glm::scale(glow, glm::vec3(0.15f, 0.12f, 0.15f));
-  shader.setMat4("model", glow);
-  cube.draw(shader.ID);
+  float fl1 = 0.82f + 0.18f * sin(time * 9.0f);
+  float fl2 = 0.85f + 0.15f * cos(time * 13.0f + 1.1f);
+  float fl3 = 0.78f + 0.22f * sin(time * 17.0f + 2.5f);
+  float swayX = 0.02f * sin(time * 5.0f);
+  float swayZ = 0.012f * cos(time * 7.0f);
 
+  // Base glow (wide, deep red-orange)
+  shader.setVec3("emissiveColor", 0.6f, 0.15f, 0.02f);
+  glm::mat4 fb =
+      glm::translate(cup, glm::vec3(swayX * 0.3f, 0.08f, swayZ * 0.3f));
+  fb = glm::scale(fb, glm::vec3(0.09f * fl1, 0.07f, 0.09f * fl1));
+  shader.setMat4("model", fb);
+  cyl.draw(shader.ID);
+
+  // Lower flame (orange)
+  shader.setVec3("emissiveColor", 1.0f, 0.35f, 0.04f);
+  glm::mat4 f1 =
+      glm::translate(cup, glm::vec3(swayX * 0.6f, 0.14f, swayZ * 0.5f));
+  f1 = glm::scale(f1, glm::vec3(0.065f * fl2, 0.10f * fl1, 0.065f * fl2));
+  shader.setMat4("model", f1);
+  cyl.draw(shader.ID);
+
+  // Mid flame (bright orange)
+  shader.setVec3("emissiveColor", 1.0f, 0.55f, 0.08f);
+  glm::mat4 f2 = glm::translate(cup, glm::vec3(swayX, 0.22f, swayZ * 0.8f));
+  f2 = glm::scale(f2, glm::vec3(0.045f * fl3, 0.12f * fl2, 0.045f * fl3));
+  shader.setMat4("model", f2);
+  cyl.draw(shader.ID);
+
+  // Upper flame (yellow, narrowing)
+  shader.setVec3("emissiveColor", 1.0f, 0.75f, 0.15f);
+  glm::mat4 f3 = glm::translate(cup, glm::vec3(swayX * 1.5f, 0.32f, swayZ));
+  f3 = glm::scale(f3, glm::vec3(0.028f * fl1, 0.10f * fl3, 0.028f * fl1));
+  shader.setMat4("model", f3);
+  cyl.draw(shader.ID);
+
+  // Flame tip (bright yellow-white wisp)
+  shader.setVec3("emissiveColor", 1.0f, 0.9f, 0.45f);
+  glm::mat4 f4 =
+      glm::translate(cup, glm::vec3(swayX * 2.0f, 0.40f, swayZ * 1.5f));
+  f4 = glm::scale(f4, glm::vec3(0.012f, 0.08f * fl2, 0.012f));
+  shader.setMat4("model", f4);
+  cyl.draw(shader.ID);
+
+  // Restore normal blending
+  glDepthMask(GL_TRUE);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   shader.setBool("useEmissive", false);
 }
 
