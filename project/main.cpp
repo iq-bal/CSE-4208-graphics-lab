@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 
+#include "audio.h"
 #include "camera.h"
 #include "geometry.h"
 #include "shader.h"
@@ -94,6 +95,9 @@ int main() {
 
   // configure global opengl state
   glEnable(GL_DEPTH_TEST);
+
+  // Start background music
+  startBackgroundMusic("resources/arabian_nights.mp3");
 
   // build and compile shaders
   Shader mainShader("vshader.glsl", "fshader.glsl");
@@ -237,6 +241,7 @@ int main() {
     glfwPollEvents();
   }
 
+  stopBackgroundMusic();
   glfwTerminate();
   return 0;
 }
