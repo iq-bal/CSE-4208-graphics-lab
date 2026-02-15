@@ -56,9 +56,9 @@ unsigned int loadTexture(const char *path);
 void drawBladeTrap(Shader &shader, Cube &cube, Cylinder &cyl,
                    glm::mat4 parentModel, float time);
 void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
-                     float slideAmount);
+                     float slideAmount, unsigned int textureID);
 void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
-                 float time);
+                 float time, unsigned int textureID);
 
 // Lantern positions: 4 per side, alternating along Z
 struct LanternInfo {
@@ -127,6 +127,9 @@ int main() {
   unsigned int wallTexture = loadTexture("resources/wall_texture.png");
   unsigned int floorTexture = loadTexture("resources/floor_texture.png");
   unsigned int pillarTexture = loadTexture("resources/pillar_texture.png");
+  unsigned int lanternTexture = loadTexture("resources/lantern_texture.png");
+  unsigned int graveyardTexture =
+      loadTexture("resources/graveyard_texture.png");
 
   // Shader config
   mainShader.use();
@@ -276,11 +279,13 @@ int main() {
 
     // Back wall
     mainShader.setBool("useTexture", true);
+    glBindTexture(GL_TEXTURE_2D, wallTexture); // Fix: Use wall texture
     model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(0.0f, 1.5f, -50.0f));
     model = glm::scale(model, glm::vec3(10.0f, 5.0f, 0.2f));
     mainShader.setMat4("model", model);
-    mainShader.setVec2("uvScale", glm::vec2(2.0f, 1.0f));
+    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
+    mainShader.setVec2("uvScale", glm::vec2(2.0f, 1.0f)); // Wide wall
     cube.draw(mainShader.ID);
 
     mainShader.setBool("useTexture", false);
@@ -294,7 +299,7 @@ int main() {
       lm = glm::translate(lm, lanterns[i].position);
       // Scale facing direction
       lm = glm::scale(lm, glm::vec3(lanterns[i].facingX, 1.0f, 1.0f));
-      drawLantern(mainShader, cube, cylinder, lm, currentFrame);
+      drawLantern(mainShader, cube, cylinder, lm, currentFrame, lanternTexture);
     }
 
     // 6. Blade Trap (Hierarchical)
@@ -306,7 +311,8 @@ int main() {
     // 7. Sarcophagus (Hierarchical + Interactive)
     glm::mat4 sarcPos = glm::mat4(1.0f);
     sarcPos = glm::translate(sarcPos, glm::vec3(0.0f, -0.5f, -20.0f));
-    drawSarcophagus(mainShader, cube, sarcPos, sarcophagusSlide);
+    drawSarcophagus(mainShader, cube, sarcPos, sarcophagusSlide,
+                    graveyardTexture);
 
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -420,11 +426,16 @@ void drawPillar(Shader &shader, Cube &cube, glm::mat4 model) {
 }
 
 void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
-                     float slideAmount) {
+                     float slideAmount, unsigned int textureID) {
+  // Common texture setup
+  shader.setBool("useTexture", true);
+  glBindTexture(GL_TEXTURE_2D, textureID);
+  shader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
+
   // Base
   glm::mat4 base = glm::scale(parentModel, glm::vec3(1.5f, 1.0f, 3.0f));
   shader.setMat4("model", base);
-  shader.setVec3("objectColor", 0.8f, 0.7f, 0.2f); // Gold/Stone
+  shader.setVec3("objectColor", 1.0f, 0.9f, 0.8f); // Bright base for texture
   cube.draw(shader.ID);
 
   // Lid (Sliding)
@@ -432,15 +443,19 @@ void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
       parentModel, glm::vec3(0.0f, 0.6f, slideAmount)); // Slide along Z
   lid = glm::scale(lid, glm::vec3(1.6f, 0.2f, 3.1f));
   shader.setMat4("model", lid);
-  shader.setVec3("objectColor", 0.9f, 0.8f, 0.3f); // Brighter Gold
+  shader.setVec3("objectColor", 1.0f, 1.0f, 1.0f); // Bright for lid detail
   cube.draw(shader.ID);
 }
 
 void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
-                 float time) {
-  // 1. Wall bracket — extends straight out from wall (no rotation)
-  shader.setBool("useEmissive", false);
-  shader.setVec3("objectColor", 0.12f, 0.1f, 0.08f);
+                 float time, unsigned int textureID) {
+  // 1. Wall bracket — extends straight out from wall
+  shader.setBool("useEmissive", false); // Must be false to see texture!
+  shader.setBool("useTexture", true);
+  shader.setVec2("uvScale", glm::vec2(1.0f, 1.0f)); // Reset scale
+  glBindTexture(GL_TEXTURE_2D, textureID);
+  shader.setVec3("objectColor", 1.0f, 1.0f,
+                 1.0f); // Bright base for dark texture
 
   // Horizontal arm
   glm::mat4 bracket = glm::translate(model, glm::vec3(0.2f, 0.0f, 0.0f));
@@ -455,7 +470,6 @@ void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
       glm::translate(torchBase, glm::vec3(0.0f, 0.15f, 0.0f));
   handleGeom = glm::scale(handleGeom, glm::vec3(0.05f, 0.5f, 0.05f));
   shader.setMat4("model", handleGeom);
-  shader.setVec3("objectColor", 0.3f, 0.2f, 0.1f);
   cyl.draw(shader.ID);
 
   // 3. Metal cup at top — holds the fire
@@ -463,10 +477,10 @@ void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
 
   glm::mat4 cupGeom = glm::scale(cup, glm::vec3(0.1f, 0.08f, 0.1f));
   shader.setMat4("model", cupGeom);
-  shader.setVec3("objectColor", 0.15f, 0.12f, 0.1f);
   cyl.draw(shader.ID);
 
-  // 4. FIRE — additive blending for realistic glow-through
+  // 4. FIRE — additive blending
+  shader.setBool("useTexture", false);
   shader.setBool("useEmissive", true);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Additive blending
