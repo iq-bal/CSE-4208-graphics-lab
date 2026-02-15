@@ -52,9 +52,6 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
 unsigned int loadTexture(const char *path);
 
-// Hierarchical Drawing Functions
-void drawBladeTrap(Shader &shader, Cube &cube, Cylinder &cyl,
-                   glm::mat4 parentModel, float time);
 void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
                      float slideAmount, unsigned int textureID);
 void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
@@ -302,12 +299,6 @@ int main() {
       drawLantern(mainShader, cube, cylinder, lm, currentFrame, lanternTexture);
     }
 
-    // 6. Blade Trap (Hierarchical)
-    glm::mat4 trapPos = glm::mat4(1.0f);
-    trapPos =
-        glm::translate(trapPos, glm::vec3(0.0f, 3.5f, -8.0f)); // Ceiling mount
-    drawBladeTrap(mainShader, cube, cylinder, trapPos, bladeTime);
-
     // 7. Sarcophagus (Hierarchical + Interactive)
     glm::mat4 sarcPos = glm::mat4(1.0f);
     sarcPos = glm::translate(sarcPos, glm::vec3(0.0f, -0.5f, -20.0f));
@@ -367,41 +358,6 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
 }
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
   camera.ProcessMouseScroll(yoffset);
-}
-
-void drawBladeTrap(Shader &shader, Cube &cube, Cylinder &cyl,
-                   glm::mat4 parentModel, float time) {
-  // 1. Ceiling Mount (Static relative to parent)
-  glm::mat4 mount = glm::scale(parentModel, glm::vec3(0.5f, 0.5f, 0.5f));
-  shader.setMat4("model", mount);
-  shader.setVec3("objectColor", 0.3f, 0.3f, 0.3f);
-  cube.draw(shader.ID);
-
-  // 2. Pendulum Arm (Rotates)
-  float angle = glm::sin(time * 2.0f) * 1.0f; // Swing +/- 1 radian
-
-  glm::mat4 armModel = glm::rotate(
-      parentModel, angle,
-      glm::vec3(0.0f, 0.0f,
-                1.0f)); // Rotate around Z (Swing in XY plane? No, swing across
-                        // corridor means rotate around Z axis)
-  // Actually, if corridor is along Z, we want to swing ACROSS it (Left-Right).
-  // That means rotating around Z axis.
-
-  // Arm visual
-  glm::mat4 armVis =
-      glm::translate(armModel, glm::vec3(0.0f, -1.5f, 0.0f)); // Move down
-  armVis = glm::scale(armVis, glm::vec3(0.1f, 3.0f, 0.1f));
-  shader.setMat4("model", armVis);
-  shader.setVec3("objectColor", 0.5f, 0.4f, 0.3f); // Rope/Chain
-  cube.draw(shader.ID);
-
-  // 3. Blade (Child of Arm)
-  glm::mat4 bladeModel = glm::translate(armModel, glm::vec3(0.0f, -3.0f, 0.0f));
-  bladeModel = glm::scale(bladeModel, glm::vec3(1.5f, 0.5f, 0.1f));
-  shader.setMat4("model", bladeModel);
-  shader.setVec3("objectColor", 0.8f, 0.8f, 0.9f); // Steel
-  cube.draw(shader.ID);
 }
 
 void drawPillar(Shader &shader, Cube &cube, glm::mat4 model) {
