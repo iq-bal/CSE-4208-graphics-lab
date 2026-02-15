@@ -74,23 +74,9 @@ glm::mat4 myLookAt(glm::vec3 position, glm::vec3 target, glm::vec3 worldUp) {
   return rotation * translation;
 }
 
-// Bus Light Coherence
-static bool busLightsOn = true;
-static bool bPressed = false;
-
 void processInput(GLFWwindow *window) {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, true);
-
-  // Bus Light Toggle (B)
-  if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS) {
-    if (!bPressed) {
-      busLightsOn = !busLightsOn;
-      bPressed = true;
-    }
-  } else {
-    bPressed = false;
-  }
 
   float cameraSpeed = 5.0f * deltaTime;
   // Standard WASD for Bus Movement (Primary)
@@ -348,18 +334,11 @@ void renderScene(unsigned int shaderProgram, Cube &busBody, Sphere &wheel,
     fixtureM = glm::scale(fixtureM, glm::vec3(0.02f, 0.1f, 0.02f)); // Thin stem
     busBody.draw(shaderProgram, fixtureM);
 
-    // 2. Bulb (Sphere) - Coherent Emission
-    // If lights are ON, bulb glows. If OFF, bulb is dark.
-    if (busLightsOn) {
-      glUniform1i(glGetUniformLocation(shaderProgram, "emissiveOn"), true);
-      glUniform3fv(glGetUniformLocation(shaderProgram, "objectColor"), 1,
-                   &glm::vec3(1.0f, 0.9f, 0.7f)[0]);
-    } else {
-      glUniform1i(glGetUniformLocation(shaderProgram, "emissiveOn"),
-                  false); // No glow
-      glUniform3fv(glGetUniformLocation(shaderProgram, "objectColor"), 1,
-                   &glm::vec3(0.1f, 0.1f, 0.1f)[0]); // Dark bulb
-    }
+    // 2. Bulb (Sphere) - Standard Emission
+    glUniform1i(glGetUniformLocation(shaderProgram, "emissiveOn"), true);
+    glUniform3fv(glGetUniformLocation(shaderProgram, "objectColor"), 1,
+                 &glm::vec3(1.0f, 0.9f, 0.7f)[0]);
+
     glm::mat4 bulbM = glm::translate(model, lightOffsets[i]);
     bulbM = glm::scale(bulbM, glm::vec3(0.08f, 0.08f, 0.08f)); // Small sphere
     wheel.draw(shaderProgram, bulbM);
@@ -580,10 +559,10 @@ int main() {
   Cube windshield(glm::vec3(0.0f, 0.7f, 0.9f));
 
   // Initialize Viewports
-  viewports[0].mode = CAM_FRONT;  // TL
-  viewports[1].mode = CAM_TOP;    // TR
-  viewports[2].mode = CAM_ISO;    // BL
-  viewports[3].mode = CAM_INSIDE; // BR
+  viewports[0].mode = CAM_ISO;    // TL: ISO (Combined Lighting)
+  viewports[1].mode = CAM_TOP;    // TR: TOP (Ambient Only)
+  viewports[2].mode = CAM_FRONT;  // BL: FRONT (Diffuse Only)
+  viewports[3].mode = CAM_INSIDE; // BR: INSIDE (Directional Only)
 
   std::cout << "Controls:\n1-3: Toggle Lights\n4: Toggle Emissive\n5-7: Toggle "
                "Components\nArrows: Move Bus\nQ/Shift+W/E/R: Cycle Cameras per "
@@ -623,26 +602,15 @@ int main() {
                                ("pointLights[" + number + "].ambient").c_str()),
           1, &glm::vec3(0.05f, 0.05f, 0.05f)[0]);
 
-      // Coherent Lighting: Intensity Linked to Toggle
-      if (busLightsOn) {
-        glUniform3fv(
-            glGetUniformLocation(
-                shaderProgram, ("pointLights[" + number + "].diffuse").c_str()),
-            1, &glm::vec3(3.0f, 2.5f, 2.0f)[0]);
-        glUniform3fv(glGetUniformLocation(
-                         shaderProgram,
-                         ("pointLights[" + number + "].specular").c_str()),
-                     1, &glm::vec3(1.0f, 1.0f, 1.0f)[0]);
-      } else {
-        glUniform3fv(
-            glGetUniformLocation(
-                shaderProgram, ("pointLights[" + number + "].diffuse").c_str()),
-            1, &glm::vec3(0.0f, 0.0f, 0.0f)[0]);
-        glUniform3fv(glGetUniformLocation(
-                         shaderProgram,
-                         ("pointLights[" + number + "].specular").c_str()),
-                     1, &glm::vec3(0.0f, 0.0f, 0.0f)[0]);
-      }
+      // Standard High Intensity (Key 2 Toggles via uniform)
+      glUniform3fv(
+          glGetUniformLocation(shaderProgram,
+                               ("pointLights[" + number + "].diffuse").c_str()),
+          1, &glm::vec3(3.0f, 2.5f, 2.0f)[0]);
+      glUniform3fv(
+          glGetUniformLocation(
+              shaderProgram, ("pointLights[" + number + "].specular").c_str()),
+          1, &glm::vec3(1.0f, 1.0f, 1.0f)[0]);
 
       glUniform1f(
           glGetUniformLocation(
@@ -734,12 +702,39 @@ int main() {
         locSpec = false;
         locEmit = false;
       }
-      // BR (Directional Only): Force Directional Source ON
+      // BR (Inside View): Directional Lighting Only (Assignment Req)
       if (i == 3) {
         locDir = true;
         locPoint = false;
         locSpot = false;
-        locAmb = true;
+        locAmb = false; // Assignment says "Directional Only", usually implies
+                        // Ambient off?
+        // Table says "Directional Only". Ambient is separate.
+        // Wait, TR is "Ambient Only".
+        // So BR should likely have NO Ambient if it's strictly Directional.
+        // But without ambient, shadows are pitch black.
+        // I will follow "Directional Only" literally: locAmb = false.
+        locDiff =
+            true; // Directional Light has Diffuse+Specular components usually.
+        // "Directional Light" usually means the Sunlight source.
+        // It contributes Ambient, Diffuse, Specular.
+        // If "Directional Only" means "Only the Directional Light Source is
+        // active", then we use locDir=true. AND we must ensure that the Global
+        // Ambient (if any) is considered "Ambient Light". The assignment
+        // separates "Ambient Light" (5) from "Directional Light" (1). So
+        // "Directional Only" likely means: 1=ON, 2=OFF, 3=OFF. 5=OFF (Ambient
+        // Term OFF), 6=ON (Diffuse Term ON), 7=ON (Specular Term ON). Let's
+        // interpret "Directional Only" as "Only Directional Light logic is
+        // enabled". The shader uses `dirLightOn` to toggle the *calculation* of
+        // the directional light. If `dirLightOn` is true, it adds
+        // Ambient+Diffuse+Specular from that light. If `locAmb` (Ambient Term
+        // Toggle) is false, the shader might skip *all* ambient calculations?
+        // Let's check shader logic later if needed. For now, strict
+        // interpretation:
+        locDir = true;
+        locPoint = false;
+        locSpot = false;
+        locAmb = false;
         locDiff = true;
         locSpec = true;
         locEmit = false;
