@@ -1,2 +1,7 @@
-main
 .DS_Store
+**/.DS_Store
+main
+*.o
+*.dSYM
+compile_commands.json
+.clangd/
