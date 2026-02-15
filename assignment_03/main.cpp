@@ -172,6 +172,7 @@ void processInput(GLFWwindow *window) {
     }
   } else
     key3Pressed = false;
+  /* Key 4 Removed - Merged with Key 2:
   static bool key4Pressed = false;
   if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
     if (!key4Pressed) {
@@ -180,6 +181,7 @@ void processInput(GLFWwindow *window) {
     }
   } else
     key4Pressed = false;
+  */
   static bool key5Pressed = false;
   if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) {
     if (!key5Pressed) {
@@ -680,7 +682,10 @@ int main() {
       bool locAmb = ambientOn;
       bool locDiff = diffuseOn;
       bool locSpec = specularOn;
-      bool locEmit = emissiveOn;
+
+      // Emissive (Bulb Glow) linked to Point Light (Interior Light)
+      // "Interior light and emissive bulbs should be the same thing"
+      bool locEmit = pointLightOn;
 
       // TL (Combined): Use global state (already set)
 
@@ -692,7 +697,7 @@ int main() {
         locAmb = true;
         locDiff = false;
         locSpec = false;
-        locEmit = false;
+        locEmit = false; // Linked to Point Light
       }
       // BL (Diffuse Only): Force Diffuse ON, others OFF
       if (i == 2) {
@@ -702,44 +707,17 @@ int main() {
         locAmb = false;
         locDiff = true;
         locSpec = false;
-        locEmit = false;
+        locEmit = false; // Linked to Point Light
       }
-      // BR (Inside View): Directional Lighting Only (Assignment Req)
+      // BR (Inside View): Directional Lighting + User Controls
       if (i == 3) {
         locDir = true;
-        locPoint = false;
+        locPoint = pointLightOn; // Allow toggling
         locSpot = false;
-        locAmb = false; // Assignment says "Directional Only", usually implies
-                        // Ambient off?
-        // Table says "Directional Only". Ambient is separate.
-        // Wait, TR is "Ambient Only".
-        // So BR should likely have NO Ambient if it's strictly Directional.
-        // But without ambient, shadows are pitch black.
-        // I will follow "Directional Only" literally: locAmb = false.
-        locDiff =
-            true; // Directional Light has Diffuse+Specular components usually.
-        // "Directional Light" usually means the Sunlight source.
-        // It contributes Ambient, Diffuse, Specular.
-        // If "Directional Only" means "Only the Directional Light Source is
-        // active", then we use locDir=true. AND we must ensure that the Global
-        // Ambient (if any) is considered "Ambient Light". The assignment
-        // separates "Ambient Light" (5) from "Directional Light" (1). So
-        // "Directional Only" likely means: 1=ON, 2=OFF, 3=OFF. 5=OFF (Ambient
-        // Term OFF), 6=ON (Diffuse Term ON), 7=ON (Specular Term ON). Let's
-        // interpret "Directional Only" as "Only Directional Light logic is
-        // enabled". The shader uses `dirLightOn` to toggle the *calculation* of
-        // the directional light. If `dirLightOn` is true, it adds
-        // Ambient+Diffuse+Specular from that light. If `locAmb` (Ambient Term
-        // Toggle) is false, the shader might skip *all* ambient calculations?
-        // Let's check shader logic later if needed. For now, strict
-        // interpretation:
-        locDir = true;
-        locPoint = false;
-        locSpot = false;
-        locAmb = false;
+        locAmb = ambientOn;
         locDiff = true;
         locSpec = true;
-        locEmit = false;
+        locEmit = pointLightOn; // Linked to Point Light
       }
 
       glUniform1i(glGetUniformLocation(shaderProgram, "dirLightOn"), locDir);
