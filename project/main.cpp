@@ -42,6 +42,10 @@ bool sarcophagusOpen = false;
 float sarcophagusSlide = 0.0f;
 bool sarcophagusInteract = false;
 
+// Lighting States
+bool flashlightOn = true;
+bool lanternsOn = true;
+
 // Lighting
 glm::vec3 lightPos(0.0f, 2.0f, 0.0f); // Central light
 
@@ -175,10 +179,17 @@ int main() {
       mainShader.setVec3(prefix + ".position",
                          lanterns[i].position +
                              glm::vec3(lanterns[i].facingX * 0.3f, 0.3f, 0.0f));
-      mainShader.setVec3(prefix + ".ambient", 0.06f, 0.04f, 0.02f);
-      mainShader.setVec3(prefix + ".diffuse", 1.0f * flicker, 0.55f * flicker,
-                         0.15f * flicker);
-      mainShader.setVec3(prefix + ".specular", 0.6f, 0.4f, 0.1f);
+      
+      if (lanternsOn) {
+        mainShader.setVec3(prefix + ".ambient", 0.06f, 0.04f, 0.02f);
+        mainShader.setVec3(prefix + ".diffuse", 1.0f * flicker, 0.55f * flicker,
+                           0.15f * flicker);
+        mainShader.setVec3(prefix + ".specular", 0.6f, 0.4f, 0.1f);
+      } else {
+        mainShader.setVec3(prefix + ".ambient", 0.0f, 0.0f, 0.0f);
+        mainShader.setVec3(prefix + ".diffuse", 0.0f, 0.0f, 0.0f);
+        mainShader.setVec3(prefix + ".specular", 0.0f, 0.0f, 0.0f);
+      }
       mainShader.setFloat(prefix + ".constant", 1.0f);
       mainShader.setFloat(prefix + ".linear", 0.22f); // Sharper falloff
       mainShader.setFloat(prefix + ".quadratic", 0.12f);
@@ -188,15 +199,23 @@ int main() {
     // SpotLight (Flashlight) – dim for atmosphere
     mainShader.setVec3("spotLight.position", camera.Position);
     mainShader.setVec3("spotLight.direction", camera.Front);
-    mainShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
-    mainShader.setVec3("spotLight.diffuse", 0.4f, 0.35f, 0.25f); // Dim warm
-    mainShader.setVec3("spotLight.specular", 0.3f, 0.3f, 0.3f);
+    
+    if (flashlightOn) {
+      mainShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
+      mainShader.setVec3("spotLight.diffuse", 0.4f, 0.35f, 0.25f); // Dim warm
+      mainShader.setVec3("spotLight.specular", 0.3f, 0.3f, 0.3f);
+    } else {
+      mainShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
+      mainShader.setVec3("spotLight.diffuse", 0.0f, 0.0f, 0.0f); 
+      mainShader.setVec3("spotLight.specular", 0.0f, 0.0f, 0.0f);
+    }
+    
     mainShader.setFloat("spotLight.constant", 1.0f);
     mainShader.setFloat("spotLight.linear", 0.14f);
     mainShader.setFloat("spotLight.quadratic", 0.07f);
     mainShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(14.0f)));
     mainShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(18.0f)));
-    mainShader.setBool("spotLightOn", true);
+    mainShader.setBool("spotLightOn", flashlightOn);
 
     // ========== DRAW SCENE ==========
     mainShader.setBool("useEmissive", false);
@@ -296,7 +315,8 @@ int main() {
       lm = glm::translate(lm, lanterns[i].position);
       // Scale facing direction
       lm = glm::scale(lm, glm::vec3(lanterns[i].facingX, 1.0f, 1.0f));
-      drawLantern(mainShader, cube, cylinder, lm, currentFrame, lanternTexture);
+      // Pass lanternsOn to drawLantern so we can disable the flame if off
+      drawLantern(mainShader, cube, cylinder, lm, lanternsOn ? currentFrame : 0.0f, lanternTexture);
     }
 
     // 7. Sarcophagus (Hierarchical + Interactive)
@@ -327,13 +347,48 @@ void processInput(GLFWwindow *window) {
   if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
     camera.ProcessKeyboard(RIGHT, deltaTime);
 
-  // Interaction
-  if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-    float dist = glm::length(camera.Position - glm::vec3(0.0f, 0.0f, -20.0f));
-    if (dist < 5.0f) {
-      sarcophagusInteract = true;
-      sarcophagusOpen = !sarcophagusOpen; // Toggle
+  // --- New Interactions: State Trackers ---
+  static bool fKeyPressed = false;
+  if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+    if (!fKeyPressed) {
+      flashlightOn = !flashlightOn; // Toggle
+      fKeyPressed = true;
     }
+  } else {
+    fKeyPressed = false;
+  }
+
+  static bool lKeyPressed = false;
+  if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
+    if (!lKeyPressed) {
+      lanternsOn = !lanternsOn; // Toggle
+      lKeyPressed = true;
+    }
+  } else {
+    lKeyPressed = false;
+  }
+
+  if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+    // Reset camera position and orientation
+    camera.Position = glm::vec3(0.0f, 1.5f, 10.0f);
+    camera.Yaw = -90.0f;
+    camera.Pitch = 0.0f;
+    camera.updateCameraVectors();
+  }
+
+  // Interaction
+  static bool eKeyPressed = false;
+  if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+    if (!eKeyPressed) {
+      float dist = glm::length(camera.Position - glm::vec3(0.0f, 0.0f, -20.0f));
+      if (dist < 5.0f) {
+        sarcophagusInteract = true;
+        sarcophagusOpen = !sarcophagusOpen; // Toggle
+      }
+      eKeyPressed = true;
+    }
+  } else {
+      eKeyPressed = false;
   }
 }
 
@@ -436,60 +491,62 @@ void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
   cyl.draw(shader.ID);
 
   // 4. FIRE — additive blending
-  shader.setBool("useTexture", false);
-  shader.setBool("useEmissive", true);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Additive blending
-  glDepthMask(GL_FALSE);             // Don't write depth for transparent fire
+  if (time > 0.0f) { // Only draw fire if time is advancing (lanterns are ON)
+    shader.setBool("useTexture", false);
+    shader.setBool("useEmissive", true);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Additive blending
+    glDepthMask(GL_FALSE);             // Don't write depth for transparent fire
 
-  float fl1 = 0.82f + 0.18f * sin(time * 9.0f);
-  float fl2 = 0.85f + 0.15f * cos(time * 13.0f + 1.1f);
-  float fl3 = 0.78f + 0.22f * sin(time * 17.0f + 2.5f);
-  float swayX = 0.02f * sin(time * 5.0f);
-  float swayZ = 0.012f * cos(time * 7.0f);
+    float fl1 = 0.82f + 0.18f * sin(time * 9.0f);
+    float fl2 = 0.85f + 0.15f * cos(time * 13.0f + 1.1f);
+    float fl3 = 0.78f + 0.22f * sin(time * 17.0f + 2.5f);
+    float swayX = 0.02f * sin(time * 5.0f);
+    float swayZ = 0.012f * cos(time * 7.0f);
 
-  // Base glow (wide, deep red-orange)
-  shader.setVec3("emissiveColor", 0.6f, 0.15f, 0.02f);
-  glm::mat4 fb =
-      glm::translate(cup, glm::vec3(swayX * 0.3f, 0.08f, swayZ * 0.3f));
-  fb = glm::scale(fb, glm::vec3(0.09f * fl1, 0.07f, 0.09f * fl1));
-  shader.setMat4("model", fb);
-  cyl.draw(shader.ID);
+    // Base glow (wide, deep red-orange)
+    shader.setVec3("emissiveColor", 0.6f, 0.15f, 0.02f);
+    glm::mat4 fb =
+        glm::translate(cup, glm::vec3(swayX * 0.3f, 0.08f, swayZ * 0.3f));
+    fb = glm::scale(fb, glm::vec3(0.09f * fl1, 0.07f, 0.09f * fl1));
+    shader.setMat4("model", fb);
+    cyl.draw(shader.ID);
 
-  // Lower flame (orange)
-  shader.setVec3("emissiveColor", 1.0f, 0.35f, 0.04f);
-  glm::mat4 f1 =
-      glm::translate(cup, glm::vec3(swayX * 0.6f, 0.14f, swayZ * 0.5f));
-  f1 = glm::scale(f1, glm::vec3(0.065f * fl2, 0.10f * fl1, 0.065f * fl2));
-  shader.setMat4("model", f1);
-  cyl.draw(shader.ID);
+    // Lower flame (orange)
+    shader.setVec3("emissiveColor", 1.0f, 0.35f, 0.04f);
+    glm::mat4 f1 =
+        glm::translate(cup, glm::vec3(swayX * 0.6f, 0.14f, swayZ * 0.5f));
+    f1 = glm::scale(f1, glm::vec3(0.065f * fl2, 0.10f * fl1, 0.065f * fl2));
+    shader.setMat4("model", f1);
+    cyl.draw(shader.ID);
 
-  // Mid flame (bright orange)
-  shader.setVec3("emissiveColor", 1.0f, 0.55f, 0.08f);
-  glm::mat4 f2 = glm::translate(cup, glm::vec3(swayX, 0.22f, swayZ * 0.8f));
-  f2 = glm::scale(f2, glm::vec3(0.045f * fl3, 0.12f * fl2, 0.045f * fl3));
-  shader.setMat4("model", f2);
-  cyl.draw(shader.ID);
+    // Mid flame (bright orange)
+    shader.setVec3("emissiveColor", 1.0f, 0.55f, 0.08f);
+    glm::mat4 f2 = glm::translate(cup, glm::vec3(swayX, 0.22f, swayZ * 0.8f));
+    f2 = glm::scale(f2, glm::vec3(0.045f * fl3, 0.12f * fl2, 0.045f * fl3));
+    shader.setMat4("model", f2);
+    cyl.draw(shader.ID);
 
-  // Upper flame (yellow, narrowing)
-  shader.setVec3("emissiveColor", 1.0f, 0.75f, 0.15f);
-  glm::mat4 f3 = glm::translate(cup, glm::vec3(swayX * 1.5f, 0.32f, swayZ));
-  f3 = glm::scale(f3, glm::vec3(0.028f * fl1, 0.10f * fl3, 0.028f * fl1));
-  shader.setMat4("model", f3);
-  cyl.draw(shader.ID);
+    // Upper flame (yellow, narrowing)
+    shader.setVec3("emissiveColor", 1.0f, 0.75f, 0.15f);
+    glm::mat4 f3 = glm::translate(cup, glm::vec3(swayX * 1.5f, 0.32f, swayZ));
+    f3 = glm::scale(f3, glm::vec3(0.028f * fl1, 0.10f * fl3, 0.028f * fl1));
+    shader.setMat4("model", f3);
+    cyl.draw(shader.ID);
 
-  // Flame tip (bright yellow-white wisp)
-  shader.setVec3("emissiveColor", 1.0f, 0.9f, 0.45f);
-  glm::mat4 f4 =
-      glm::translate(cup, glm::vec3(swayX * 2.0f, 0.40f, swayZ * 1.5f));
-  f4 = glm::scale(f4, glm::vec3(0.012f, 0.08f * fl2, 0.012f));
-  shader.setMat4("model", f4);
-  cyl.draw(shader.ID);
+    // Flame tip (bright yellow-white wisp)
+    shader.setVec3("emissiveColor", 1.0f, 0.9f, 0.45f);
+    glm::mat4 f4 =
+        glm::translate(cup, glm::vec3(swayX * 2.0f, 0.40f, swayZ * 1.5f));
+    f4 = glm::scale(f4, glm::vec3(0.012f, 0.08f * fl2, 0.012f));
+    shader.setMat4("model", f4);
+    cyl.draw(shader.ID);
 
-  // Restore normal blending
-  glDepthMask(GL_TRUE);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  shader.setBool("useEmissive", false);
+    // Restore normal blending
+    glDepthMask(GL_TRUE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    shader.setBool("useEmissive", false);
+  }
 }
 
 unsigned int loadTexture(const char *path) {
