@@ -46,6 +46,9 @@ bool sarcophagusInteract = false;
 bool flashlightOn = true;
 bool lanternsOn = true;
 
+// Texture States
+bool texturesEnabled = true;
+
 // Lighting
 glm::vec3 lightPos(0.0f, 2.0f, 0.0f); // Central light
 
@@ -57,9 +60,9 @@ void processInput(GLFWwindow *window);
 unsigned int loadTexture(const char *path);
 
 void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
-                     float slideAmount, unsigned int textureID);
+                     float slideAmount, unsigned int textureID, bool useTexture);
 void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
-                 float time, unsigned int textureID);
+                 float time, unsigned int textureID, bool useTexture);
 
 // Lantern positions: 4 per side, alternating along Z
 struct LanternInfo {
@@ -230,7 +233,7 @@ int main() {
     model = glm::scale(model, glm::vec3(10.0f, 0.1f, 50.0f));
     mainShader.setMat4("model", model);
     mainShader.setVec3("objectColor", 0.6f, 0.55f, 0.5f);
-    mainShader.setBool("useTexture", true);
+    mainShader.setBool("useTexture", texturesEnabled);
     mainShader.setVec2("uvScale", glm::vec2(5.0f, 25.0f));
     cube.draw(mainShader.ID);
 
@@ -239,7 +242,7 @@ int main() {
       float zPos = -i * 5.0f;
 
       // --- 1. Vertical Dividers (Wall Columns) ---
-      mainShader.setBool("useTexture", true);
+      mainShader.setBool("useTexture", texturesEnabled);
       glBindTexture(GL_TEXTURE_2D, pillarTexture);
       mainShader.setVec3("objectColor", 0.65f, 0.55f, 0.4f);
       mainShader.setVec2("uvScale", glm::vec2(1.0f, 5.0f)); // Vertical grooves
@@ -264,7 +267,7 @@ int main() {
       cube.draw(mainShader.ID);
 
       // --- 3. Wall Panels (between dividers) ---
-      mainShader.setBool("useTexture", true);
+      mainShader.setBool("useTexture", texturesEnabled);
       glBindTexture(GL_TEXTURE_2D, wallTexture);
       mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
       mainShader.setVec2("uvScale", glm::vec2(0.8f, 1.0f)); // Large figures
@@ -294,7 +297,7 @@ int main() {
     }
 
     // Back wall
-    mainShader.setBool("useTexture", true);
+    mainShader.setBool("useTexture", texturesEnabled);
     glBindTexture(GL_TEXTURE_2D, wallTexture); // Fix: Use wall texture
     model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(0.0f, 1.5f, -50.0f));
@@ -315,15 +318,15 @@ int main() {
       lm = glm::translate(lm, lanterns[i].position);
       // Scale facing direction
       lm = glm::scale(lm, glm::vec3(lanterns[i].facingX, 1.0f, 1.0f));
-      // Pass lanternsOn to drawLantern so we can disable the flame if off
-      drawLantern(mainShader, cube, cylinder, lm, lanternsOn ? currentFrame : 0.0f, lanternTexture);
+      // Pass lanternsOn and texturesEnabled to drawLantern
+      drawLantern(mainShader, cube, cylinder, lm, lanternsOn ? currentFrame : 0.0f, lanternTexture, texturesEnabled);
     }
 
     // 7. Sarcophagus (Hierarchical + Interactive)
     glm::mat4 sarcPos = glm::mat4(1.0f);
     sarcPos = glm::translate(sarcPos, glm::vec3(0.0f, -0.5f, -20.0f));
     drawSarcophagus(mainShader, cube, sarcPos, sarcophagusSlide,
-                    graveyardTexture);
+                    graveyardTexture, texturesEnabled);
 
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -366,6 +369,16 @@ void processInput(GLFWwindow *window) {
     }
   } else {
     lKeyPressed = false;
+  }
+
+  static bool tKeyPressed = false;
+  if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
+    if (!tKeyPressed) {
+      texturesEnabled = !texturesEnabled; // Toggle
+      tKeyPressed = true;
+    }
+  } else {
+    tKeyPressed = false;
   }
 
   if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
@@ -437,9 +450,9 @@ void drawPillar(Shader &shader, Cube &cube, glm::mat4 model) {
 }
 
 void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
-                     float slideAmount, unsigned int textureID) {
+                     float slideAmount, unsigned int textureID, bool useTexture) {
   // Common texture setup
-  shader.setBool("useTexture", true);
+  shader.setBool("useTexture", useTexture);
   glBindTexture(GL_TEXTURE_2D, textureID);
   shader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
 
@@ -459,10 +472,10 @@ void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
 }
 
 void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
-                 float time, unsigned int textureID) {
+                 float time, unsigned int textureID, bool useTexture) {
   // 1. Wall bracket — extends straight out from wall
   shader.setBool("useEmissive", false); // Must be false to see texture!
-  shader.setBool("useTexture", true);
+  shader.setBool("useTexture", useTexture);
   shader.setVec2("uvScale", glm::vec2(1.0f, 1.0f)); // Reset scale
   glBindTexture(GL_TEXTURE_2D, textureID);
   shader.setVec3("objectColor", 1.0f, 1.0f,
