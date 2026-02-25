@@ -1,5 +1,5 @@
 
-CXX = g++
+CXX = clang++
 OBJCXX = clang++
 CXXFLAGS = -std=c++17 -I/opt/homebrew/include -I.
 OBJCXXFLAGS = -std=c++17 -I. -fobjc-arc
