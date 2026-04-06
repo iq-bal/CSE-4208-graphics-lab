@@ -174,6 +174,8 @@ int main() {
   mainShader.setInt("normalMap", 1);
   mainShader.setBool("useEmissive", false);
   mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
+  mainShader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
+  mainShader.setBool("rotateUV90", false);
 
   // Render loop
   while (!glfwWindowShouldClose(window)) {
@@ -294,6 +296,8 @@ int main() {
     mainShader.setBool("useEmissive", false);
     mainShader.setBool("useNormalMap", false);
     mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
+    mainShader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
+    mainShader.setBool("rotateUV90", false);
 
     // Draw Floor (Continuous)
     glActiveTexture(GL_TEXTURE0);
@@ -420,6 +424,7 @@ int main() {
 
     // Full-height carved door leaves (kept open for access).
     glBindTexture(GL_TEXTURE_2D, doorTexture);
+    mainShader.setBool("rotateUV90", true);
     glm::mat4 leftDoorBase = glm::mat4(1.0f);
     leftDoorBase = glm::translate(leftDoorBase, glm::vec3(-5.0f, 1.5f, -47.95f));
     leftDoorBase = glm::rotate(leftDoorBase,
@@ -428,8 +433,9 @@ int main() {
 
     glm::mat4 leftDoor = glm::scale(leftDoorBase, glm::vec3(0.14f, 5.0f, 1.05f));
     mainShader.setMat4("model", leftDoor);
-    mainShader.setVec3("objectColor", 0.58f, 0.46f, 0.31f);
-    mainShader.setVec2("uvScale", glm::vec2(1.0f, 3.0f));
+    mainShader.setVec3("objectColor", 1.0f, 1.0f, 1.0f);
+    mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
+    mainShader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
     cube.draw(mainShader.ID);
 
     glm::mat4 rightDoorBase = glm::mat4(1.0f);
@@ -441,8 +447,9 @@ int main() {
     glm::mat4 rightDoor =
       glm::scale(rightDoorBase, glm::vec3(0.14f, 5.0f, 1.05f));
     mainShader.setMat4("model", rightDoor);
-    mainShader.setVec3("objectColor", 0.58f, 0.46f, 0.31f);
-    mainShader.setVec2("uvScale", glm::vec2(1.0f, 3.0f));
+    mainShader.setVec3("objectColor", 1.0f, 1.0f, 1.0f);
+    mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
+    mainShader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
     cube.draw(mainShader.ID);
 
     // Bronze-like horizontal straps to evoke the reference tomb door style.
@@ -529,6 +536,7 @@ int main() {
     mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
     mainShader.setVec2("uvScale", glm::vec2(2.0f, 1.0f));
     cube.draw(mainShader.ID);
+    mainShader.setBool("rotateUV90", false);
 
     mainShader.setBool("useTexture", false);
     mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
@@ -770,6 +778,7 @@ void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
   shader.setBool("useTexture", useTexture);
   glBindTexture(GL_TEXTURE_2D, textureID);
   shader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
+  shader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
 
   // Base
   glm::mat4 base = glm::scale(parentModel, glm::vec3(1.5f, 1.0f, 3.0f));
@@ -792,6 +801,7 @@ void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
   shader.setBool("useEmissive", false); // Must be false to see texture!
   shader.setBool("useTexture", useTexture);
   shader.setVec2("uvScale", glm::vec2(1.0f, 1.0f)); // Reset scale
+  shader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
   glBindTexture(GL_TEXTURE_2D, textureID);
   shader.setVec3("objectColor", 1.0f, 1.0f,
                  1.0f); // Bright base for dark texture

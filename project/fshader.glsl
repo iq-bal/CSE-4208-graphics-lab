@@ -50,6 +50,8 @@ uniform bool useEmissive;
 uniform vec3 emissiveColor;
 
 uniform vec2 uvScale;
+uniform vec2 uvOffset;
+uniform bool rotateUV90;
 
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 color);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 color);
@@ -63,7 +65,10 @@ void main()
     }
 
     vec3 norm = normalize(Normal);
-    vec2 scaledTexCoords = TexCoords * uvScale;
+    vec2 scaledTexCoords = TexCoords * uvScale + uvOffset;
+    if (rotateUV90) {
+        scaledTexCoords = vec2(scaledTexCoords.y, 1.0 - scaledTexCoords.x);
+    }
     if (useNormalMap) {
         norm = texture(normalMap, scaledTexCoords).rgb;
         norm = norm * 2.0 - 1.0;   
