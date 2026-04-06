@@ -581,14 +581,11 @@ void processInput(GLFWwindow *window) {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, true);
 
-  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-    camera.ProcessKeyboard(FORWARD, deltaTime);
-  if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-    camera.ProcessKeyboard(BACKWARD, deltaTime);
-  if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-    camera.ProcessKeyboard(LEFT, deltaTime);
-  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-    camera.ProcessKeyboard(RIGHT, deltaTime);
+  // --- New Interactions: State Trackers ---
+  static bool fKeyPressed = false;
+  static bool lKeyPressed = false;
+  static bool tKeyPressed = false;
+  static bool eKeyPressed = false;
 
   float doorDistance = glm::length(camera.Position - SIDE_DOOR_HINT_POS);
   sideDoorPlayerNearby = (doorDistance < SIDE_DOOR_HINT_RADIUS);
@@ -620,8 +617,26 @@ void processInput(GLFWwindow *window) {
     sideDoorInputBuffer.clear();
   }
 
-  // --- New Interactions: State Trackers ---
-  static bool fKeyPressed = false;
+  bool passwordModeActive = sideDoorPlayerNearby && !sideDoorUnlocked;
+  if (passwordModeActive) {
+    // In password mode, only text input callbacks should be active.
+    fKeyPressed = false;
+    lKeyPressed = false;
+    tKeyPressed = false;
+    eKeyPressed = false;
+    constrainCameraToTomb();
+    return;
+  }
+
+  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    camera.ProcessKeyboard(FORWARD, deltaTime);
+  if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    camera.ProcessKeyboard(BACKWARD, deltaTime);
+  if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    camera.ProcessKeyboard(LEFT, deltaTime);
+  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    camera.ProcessKeyboard(RIGHT, deltaTime);
+
   if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
     if (!fKeyPressed) {
       flashlightOn = !flashlightOn; // Toggle
@@ -631,7 +646,6 @@ void processInput(GLFWwindow *window) {
     fKeyPressed = false;
   }
 
-  static bool lKeyPressed = false;
   if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
     if (!lKeyPressed) {
       lanternsOn = !lanternsOn; // Toggle
@@ -641,7 +655,6 @@ void processInput(GLFWwindow *window) {
     lKeyPressed = false;
   }
 
-  static bool tKeyPressed = false;
   if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
     if (!tKeyPressed) {
       texturesEnabled = !texturesEnabled; // Toggle
@@ -660,7 +673,6 @@ void processInput(GLFWwindow *window) {
   }
 
   // Interaction
-  static bool eKeyPressed = false;
   if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
     if (!eKeyPressed) {
       float dist = glm::length(camera.Position - glm::vec3(0.0f, 0.0f, -20.0f));
