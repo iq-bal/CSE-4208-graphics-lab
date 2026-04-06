@@ -59,7 +59,7 @@ const float CAMERA_MAX_Z = -0.8f;
 
 const glm::vec3 SIDE_DOOR_HINT_POS(-5.0f, CAMERA_EYE_HEIGHT, -47.5f);
 const float SIDE_DOOR_HINT_RADIUS = 2.8f;
-const std::string SIDE_DOOR_CODE = "ANKH";
+const std::string SIDE_DOOR_CODE = "DHARAGOL";
 
 bool sideDoorUnlocked = false;
 bool sideDoorPlayerNearby = false;
@@ -606,7 +606,7 @@ void processInput(GLFWwindow *window) {
 
   if (sideDoorPlayerNearby && !sideDoorUnlocked && !sideDoorHintShown) {
     std::cout << "\n=== ANCIENT DOOR SEAL ===\n";
-    std::cout << "Inscription: BOLI\n";
+    std::cout << "Inscription: EIBSBHPM\n";
     std::cout << "Hint: The code is Caesar-shifted by +1."
                  " Shift each letter back by 1 and press ENTER.\n";
     std::cout << "Type your answer with keyboard letters (A-Z)."
