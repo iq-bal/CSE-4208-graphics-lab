@@ -236,12 +236,12 @@ int main() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, floorTexture);
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, -1.0f, -15.0f));
-    model = glm::scale(model, glm::vec3(10.0f, 0.1f, 50.0f));
+    model = glm::translate(model, glm::vec3(0.0f, -1.0f, -20.0f));
+    model = glm::scale(model, glm::vec3(10.0f, 0.1f, 60.0f));
     mainShader.setMat4("model", model);
     mainShader.setVec3("objectColor", 0.6f, 0.55f, 0.5f);
     mainShader.setBool("useTexture", texturesEnabled);
-    mainShader.setVec2("uvScale", glm::vec2(5.0f, 25.0f));
+    mainShader.setVec2("uvScale", glm::vec2(5.0f, 30.0f));
     cube.draw(mainShader.ID);
 
     // Segmented Walls, Ceiling, and Dividers
