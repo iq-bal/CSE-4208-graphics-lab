@@ -2,8 +2,10 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include <cctype>
 #include <cmath>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include "audio.h"
@@ -55,6 +57,18 @@ const float CAMERA_MAX_X = 4.6f;
 const float CAMERA_MIN_Z = -52.0f;
 const float CAMERA_MAX_Z = -0.8f;
 
+const glm::vec3 SIDE_DOOR_HINT_POS(-5.0f, CAMERA_EYE_HEIGHT, -47.5f);
+const float SIDE_DOOR_HINT_RADIUS = 2.8f;
+const std::string SIDE_DOOR_CODE = "ANKH";
+
+bool sideDoorUnlocked = false;
+bool sideDoorPlayerNearby = false;
+bool sideDoorHintShown = false;
+std::string sideDoorInputBuffer;
+float sideDoorOpenAmount = 0.0f;
+bool sideDoorZoneMuted = false;
+bool horrorTrackStarted = false;
+
 // Lighting
 glm::vec3 lightPos(0.0f, 2.0f, 0.0f); // Central light
 
@@ -62,6 +76,9 @@ glm::vec3 lightPos(0.0f, 2.0f, 0.0f); // Central light
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
+void char_callback(GLFWwindow *window, unsigned int codepoint);
+void key_callback(GLFWwindow *window, int key, int scancode, int action,
+                  int mods);
 void processInput(GLFWwindow *window);
 unsigned int loadTexture(const char *path);
 void constrainCameraToTomb();
@@ -117,6 +134,8 @@ int main() {
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
   glfwSetCursorPosCallback(window, mouse_callback);
   glfwSetScrollCallback(window, scroll_callback);
+  glfwSetCharCallback(window, char_callback);
+  glfwSetKeyCallback(window, key_callback);
 
   // tell GLFW to capture our mouse
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -144,6 +163,7 @@ int main() {
   unsigned int wallTexture = loadTexture("resources/wall_texture.png");
   unsigned int floorTexture = loadTexture("resources/floor_texture.png");
   unsigned int pillarTexture = loadTexture("resources/pillar_texture.png");
+  unsigned int doorTexture = loadTexture("resources/door_texture.png");
   unsigned int lanternTexture = loadTexture("resources/lantern_texture.png");
   unsigned int graveyardTexture =
       loadTexture("resources/graveyard_texture.png");
@@ -170,6 +190,16 @@ int main() {
         sarcophagusSlide += deltaTime;
       if (!sarcophagusOpen && sarcophagusSlide > 0.0f)
         sarcophagusSlide -= deltaTime;
+    }
+
+    float targetDoorOpen = sideDoorUnlocked ? 1.0f : 0.0f;
+    float doorSpeed = 1.8f;
+    if (sideDoorOpenAmount < targetDoorOpen) {
+      sideDoorOpenAmount =
+          glm::min(targetDoorOpen, sideDoorOpenAmount + doorSpeed * deltaTime);
+    } else if (sideDoorOpenAmount > targetDoorOpen) {
+      sideDoorOpenAmount =
+          glm::max(targetDoorOpen, sideDoorOpenAmount - doorSpeed * deltaTime);
     }
 
     glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
@@ -389,10 +419,11 @@ int main() {
     cube.draw(mainShader.ID);
 
     // Full-height carved door leaves (kept open for access).
-    glBindTexture(GL_TEXTURE_2D, wallTexture);
+    glBindTexture(GL_TEXTURE_2D, doorTexture);
     glm::mat4 leftDoorBase = glm::mat4(1.0f);
-    leftDoorBase = glm::translate(leftDoorBase, glm::vec3(-5.0f, 1.5f, -48.25f));
-    leftDoorBase = glm::rotate(leftDoorBase, glm::radians(-68.0f),
+    leftDoorBase = glm::translate(leftDoorBase, glm::vec3(-5.0f, 1.5f, -47.95f));
+    leftDoorBase = glm::rotate(leftDoorBase,
+                   glm::radians(-68.0f * sideDoorOpenAmount),
                    glm::vec3(0.0f, 1.0f, 0.0f));
 
     glm::mat4 leftDoor = glm::scale(leftDoorBase, glm::vec3(0.14f, 5.0f, 1.05f));
@@ -402,8 +433,9 @@ int main() {
     cube.draw(mainShader.ID);
 
     glm::mat4 rightDoorBase = glm::mat4(1.0f);
-    rightDoorBase = glm::translate(rightDoorBase, glm::vec3(-5.0f, 1.5f, -46.75f));
-    rightDoorBase = glm::rotate(rightDoorBase, glm::radians(68.0f),
+    rightDoorBase = glm::translate(rightDoorBase, glm::vec3(-5.0f, 1.5f, -47.05f));
+    rightDoorBase = glm::rotate(rightDoorBase,
+                  glm::radians(68.0f * sideDoorOpenAmount),
                   glm::vec3(0.0f, 1.0f, 0.0f));
 
     glm::mat4 rightDoor =
@@ -550,6 +582,36 @@ void processInput(GLFWwindow *window) {
   if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
     camera.ProcessKeyboard(RIGHT, deltaTime);
 
+  float doorDistance = glm::length(camera.Position - SIDE_DOOR_HINT_POS);
+  sideDoorPlayerNearby = (doorDistance < SIDE_DOOR_HINT_RADIUS);
+
+  if (sideDoorPlayerNearby && !sideDoorUnlocked && !sideDoorZoneMuted) {
+    stopBackgroundMusic();
+    sideDoorZoneMuted = true;
+  }
+
+  if (!sideDoorPlayerNearby && !sideDoorUnlocked && sideDoorZoneMuted &&
+      !horrorTrackStarted) {
+    startBackgroundMusic("resources/arabian_nights.mp3");
+    sideDoorZoneMuted = false;
+  }
+
+  if (sideDoorPlayerNearby && !sideDoorUnlocked && !sideDoorHintShown) {
+    std::cout << "\n=== ANCIENT DOOR SEAL ===\n";
+    std::cout << "Inscription: BOLI\n";
+    std::cout << "Hint: The code is Caesar-shifted by +1."
+                 " Shift each letter back by 1 and press ENTER.\n";
+    std::cout << "Type your answer with keyboard letters (A-Z)."
+                 " Backspace edits.\n";
+    std::cout << "========================\n";
+    sideDoorHintShown = true;
+  }
+
+  if (!sideDoorPlayerNearby) {
+    sideDoorHintShown = false;
+    sideDoorInputBuffer.clear();
+  }
+
   // --- New Interactions: State Trackers ---
   static bool fKeyPressed = false;
   if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
@@ -608,7 +670,9 @@ void processInput(GLFWwindow *window) {
 }
 
 void constrainCameraToTomb() {
-  camera.Position.x = glm::clamp(camera.Position.x, CAMERA_MIN_X, CAMERA_MAX_X);
+  // Keep player in main hall until puzzle solved, but allow stepping up to door.
+  float minX = sideDoorUnlocked ? CAMERA_MIN_X : -5.2f;
+  camera.Position.x = glm::clamp(camera.Position.x, minX, CAMERA_MAX_X);
   camera.Position.z = glm::clamp(camera.Position.z, CAMERA_MIN_Z, CAMERA_MAX_Z);
   camera.Position.y = CAMERA_EYE_HEIGHT;
 }
@@ -634,6 +698,49 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
 }
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
   camera.ProcessMouseScroll(yoffset);
+}
+
+void char_callback(GLFWwindow *window, unsigned int codepoint) {
+  if (!sideDoorPlayerNearby || sideDoorUnlocked)
+    return;
+
+  if (codepoint >= 'a' && codepoint <= 'z')
+    codepoint = codepoint - 'a' + 'A';
+
+  if (codepoint >= 'A' && codepoint <= 'Z') {
+    sideDoorInputBuffer.push_back(static_cast<char>(codepoint));
+    std::cout << "Door input: " << sideDoorInputBuffer << std::endl;
+  }
+}
+
+void key_callback(GLFWwindow *window, int key, int scancode, int action,
+                  int mods) {
+  if (!sideDoorPlayerNearby || sideDoorUnlocked || action != GLFW_PRESS)
+    return;
+
+  if (key == GLFW_KEY_BACKSPACE) {
+    if (!sideDoorInputBuffer.empty()) {
+      sideDoorInputBuffer.pop_back();
+      std::cout << "Door input: " << sideDoorInputBuffer << std::endl;
+    }
+    return;
+  }
+
+  if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
+    if (sideDoorInputBuffer == SIDE_DOOR_CODE) {
+      sideDoorUnlocked = true;
+      stopBackgroundMusic();
+      if (!horrorTrackStarted) {
+        startBackgroundMusic("resources/horror_sound.mp3");
+        horrorTrackStarted = true;
+      }
+      sideDoorZoneMuted = false;
+      std::cout << "The seal breaks. The stone doors open." << std::endl;
+    } else {
+      std::cout << "Wrong code. The seal remains." << std::endl;
+    }
+    sideDoorInputBuffer.clear();
+  }
 }
 
 void drawPillar(Shader &shader, Cube &cube, glm::mat4 model) {
