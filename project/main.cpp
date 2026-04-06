@@ -24,7 +24,7 @@ const unsigned int SCR_WIDTH = 1000;
 const unsigned int SCR_HEIGHT = 800;
 
 // Camera
-Camera camera(glm::vec3(0.0f, 1.5f, 10.0f));
+Camera camera(glm::vec3(0.0f, 1.5f, -5.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -49,6 +49,12 @@ bool lanternsOn = true;
 // Texture States
 bool texturesEnabled = true;
 
+const float CAMERA_EYE_HEIGHT = 1.5f;
+const float CAMERA_MIN_X = -4.6f;
+const float CAMERA_MAX_X = 4.6f;
+const float CAMERA_MIN_Z = -49.0f;
+const float CAMERA_MAX_Z = -0.8f;
+
 // Lighting
 glm::vec3 lightPos(0.0f, 2.0f, 0.0f); // Central light
 
@@ -58,6 +64,7 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
 unsigned int loadTexture(const char *path);
+void constrainCameraToTomb();
 
 void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
                      float slideAmount, unsigned int textureID, bool useTexture);
@@ -307,6 +314,15 @@ int main() {
     mainShader.setVec2("uvScale", glm::vec2(2.0f, 1.0f)); // Wide wall
     cube.draw(mainShader.ID);
 
+    // Front wall cap to keep the view enclosed inside the tomb
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.35f));
+    model = glm::scale(model, glm::vec3(10.0f, 5.0f, 0.2f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
+    mainShader.setVec2("uvScale", glm::vec2(2.0f, 1.0f));
+    cube.draw(mainShader.ID);
+
     mainShader.setBool("useTexture", false);
     mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
 
@@ -383,7 +399,7 @@ void processInput(GLFWwindow *window) {
 
   if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
     // Reset camera position and orientation
-    camera.Position = glm::vec3(0.0f, 1.5f, 10.0f);
+    camera.Position = glm::vec3(0.0f, CAMERA_EYE_HEIGHT, -5.0f);
     camera.Yaw = -90.0f;
     camera.Pitch = 0.0f;
     camera.updateCameraVectors();
@@ -403,6 +419,14 @@ void processInput(GLFWwindow *window) {
   } else {
       eKeyPressed = false;
   }
+
+  constrainCameraToTomb();
+}
+
+void constrainCameraToTomb() {
+  camera.Position.x = glm::clamp(camera.Position.x, CAMERA_MIN_X, CAMERA_MAX_X);
+  camera.Position.z = glm::clamp(camera.Position.z, CAMERA_MIN_Z, CAMERA_MAX_Z);
+  camera.Position.y = CAMERA_EYE_HEIGHT;
 }
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {

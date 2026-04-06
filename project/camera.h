@@ -18,6 +18,8 @@ const float PITCH = 0.0f;
 const float SPEED = 2.5f;
 const float SENSITIVITY = 0.1f;
 const float ZOOM = 45.0f;
+const float MAX_PITCH_UP = 18.0f;
+const float MAX_PITCH_DOWN = -55.0f;
 
 // An abstract camera class that processes input and calculates the
 // corresponding Euler Angles, Vectors and Matrices for use in OpenGL
@@ -58,10 +60,12 @@ public:
   // processes input received from any keyboard-like input system
   void ProcessKeyboard(Camera_Movement direction, float deltaTime) {
     float velocity = MovementSpeed * deltaTime;
+    glm::vec3 forward = glm::normalize(glm::vec3(Front.x, 0.0f, Front.z));
+
     if (direction == FORWARD)
-      Position += Front * velocity;
+      Position += forward * velocity;
     if (direction == BACKWARD)
-      Position -= Front * velocity;
+      Position -= forward * velocity;
     if (direction == LEFT)
       Position -= Right * velocity;
     if (direction == RIGHT)
@@ -83,10 +87,10 @@ public:
 
     // make sure that when pitch is out of bounds, screen doesn't get flipped
     if (constrainPitch) {
-      if (Pitch > 89.0f)
-        Pitch = 89.0f;
-      if (Pitch < -89.0f)
-        Pitch = -89.0f;
+      if (Pitch > MAX_PITCH_UP)
+        Pitch = MAX_PITCH_UP;
+      if (Pitch < MAX_PITCH_DOWN)
+        Pitch = MAX_PITCH_DOWN;
     }
 
     // update Front, Right and Up Vectors using the updated Euler angles
