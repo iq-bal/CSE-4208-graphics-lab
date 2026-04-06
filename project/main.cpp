@@ -50,9 +50,9 @@ bool lanternsOn = true;
 bool texturesEnabled = true;
 
 const float CAMERA_EYE_HEIGHT = 1.5f;
-const float CAMERA_MIN_X = -4.6f;
+const float CAMERA_MIN_X = -18.2f;
 const float CAMERA_MAX_X = 4.6f;
-const float CAMERA_MIN_Z = -74.0f;
+const float CAMERA_MIN_Z = -52.0f;
 const float CAMERA_MAX_Z = -0.8f;
 
 // Lighting
@@ -89,8 +89,8 @@ const LanternInfo lanterns[] = {
 const int NUM_LANTERNS = 8;
 
 const LanternInfo secondRoomLanterns[] = {
-  {{-4.75f, 2.2f, -57.5f}, 1.0f}, {{-4.75f, 2.2f, -67.5f}, 1.0f},
-  {{4.75f, 2.2f, -57.5f}, -1.0f}, {{4.75f, 2.2f, -67.5f}, -1.0f},
+    {{-18.75f, 2.2f, -45.0f}, 1.0f}, {{-18.75f, 2.2f, -50.0f}, 1.0f},
+    {{-5.25f, 2.2f, -45.0f}, -1.0f}, {{-5.25f, 2.2f, -50.0f}, -1.0f},
 };
 const int NUM_SECOND_ROOM_LANTERNS = 4;
 
@@ -313,11 +313,26 @@ int main() {
       mainShader.setVec2("uvScale", glm::vec2(0.8f, 1.0f)); // Large figures
 
       // Left Panel
-      model = glm::mat4(1.0f);
-      model = glm::translate(model, glm::vec3(-5.0f, 1.5f, zPos - 2.5f));
-      model = glm::scale(model, glm::vec3(0.2f, 5.0f, 4.5f));
-      mainShader.setMat4("model", model);
-      cube.draw(mainShader.ID);
+      if (i == 9) {
+        // Full-height door opening in the left wall near the far end.
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(-5.0f, 1.5f, -49.1f));
+        model = glm::scale(model, glm::vec3(0.2f, 5.0f, 1.3f));
+        mainShader.setMat4("model", model);
+        cube.draw(mainShader.ID);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(-5.0f, 1.5f, -45.9f));
+        model = glm::scale(model, glm::vec3(0.2f, 5.0f, 1.3f));
+        mainShader.setMat4("model", model);
+        cube.draw(mainShader.ID);
+      } else {
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(-5.0f, 1.5f, zPos - 2.5f));
+        model = glm::scale(model, glm::vec3(0.2f, 5.0f, 4.5f));
+        mainShader.setMat4("model", model);
+        cube.draw(mainShader.ID);
+      }
       // Right Panel
       model = glm::mat4(1.0f);
       model = glm::translate(model, glm::vec3(5.0f, 1.5f, zPos - 2.5f));
@@ -336,97 +351,142 @@ int main() {
       cube.draw(mainShader.ID);
     }
 
-    // Gateway wall to second chamber (door opening on left side)
+    // Back wall remains solid; side access is now through the left wall door.
     mainShader.setBool("useTexture", texturesEnabled);
     glBindTexture(GL_TEXTURE_2D, wallTexture);
-
-    // Narrow left edge section
     model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(-4.8f, 1.5f, -50.0f));
-    model = glm::scale(model, glm::vec3(0.4f, 5.0f, 0.2f));
-    mainShader.setMat4("model", model);
-    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
-    mainShader.setVec2("uvScale", glm::vec2(0.5f, 1.0f));
-    cube.draw(mainShader.ID);
-
-    // Large right section
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(1.6f, 1.5f, -50.0f));
-    model = glm::scale(model, glm::vec3(6.8f, 5.0f, 0.2f));
-    mainShader.setMat4("model", model);
-    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
-    mainShader.setVec2("uvScale", glm::vec2(2.0f, 1.0f));
-    cube.draw(mainShader.ID);
-
-    // Lintel above doorway
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(-3.2f, 3.35f, -50.0f));
-    model = glm::scale(model, glm::vec3(2.8f, 1.7f, 0.2f));
-    mainShader.setMat4("model", model);
-    mainShader.setVec3("objectColor", 0.6f, 0.5f, 0.35f);
-    mainShader.setVec2("uvScale", glm::vec2(1.2f, 1.0f));
-    cube.draw(mainShader.ID);
-
-    // Carved stone door leaves, set open so player can enter
-    glBindTexture(GL_TEXTURE_2D, pillarTexture);
-    glm::mat4 leftDoor = glm::mat4(1.0f);
-    leftDoor = glm::translate(leftDoor, glm::vec3(-4.2f, 0.7f, -49.7f));
-    leftDoor =
-      glm::rotate(leftDoor, glm::radians(72.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    leftDoor = glm::scale(leftDoor, glm::vec3(1.1f, 3.4f, 0.12f));
-    mainShader.setMat4("model", leftDoor);
-    mainShader.setVec3("objectColor", 0.55f, 0.45f, 0.3f);
-    mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.8f));
-    cube.draw(mainShader.ID);
-
-    glm::mat4 rightDoor = glm::mat4(1.0f);
-  rightDoor = glm::translate(rightDoor, glm::vec3(-2.2f, 0.7f, -49.7f));
-    rightDoor = glm::rotate(rightDoor, glm::radians(-72.0f),
-                glm::vec3(0.0f, 1.0f, 0.0f));
-    rightDoor = glm::scale(rightDoor, glm::vec3(1.1f, 3.4f, 0.12f));
-    mainShader.setMat4("model", rightDoor);
-    mainShader.setVec3("objectColor", 0.55f, 0.45f, 0.3f);
-    mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.8f));
-    cube.draw(mainShader.ID);
-
-    // Second room beyond the doorway
-    glBindTexture(GL_TEXTURE_2D, wallTexture);
-
-    // Left wall
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(-5.0f, 1.5f, -62.5f));
-    model = glm::scale(model, glm::vec3(0.2f, 5.0f, 25.0f));
-    mainShader.setMat4("model", model);
-    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
-    mainShader.setVec2("uvScale", glm::vec2(1.5f, 5.0f));
-    cube.draw(mainShader.ID);
-
-    // Right wall
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(5.0f, 1.5f, -62.5f));
-    model = glm::scale(model, glm::vec3(0.2f, 5.0f, 25.0f));
-    mainShader.setMat4("model", model);
-    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
-    mainShader.setVec2("uvScale", glm::vec2(1.5f, 5.0f));
-    cube.draw(mainShader.ID);
-
-    // Back wall of second room
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, 1.5f, -75.0f));
+    model = glm::translate(model, glm::vec3(0.0f, 1.5f, -50.0f));
     model = glm::scale(model, glm::vec3(10.0f, 5.0f, 0.2f));
     mainShader.setMat4("model", model);
-    mainShader.setVec3("objectColor", 0.68f, 0.58f, 0.38f);
+    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
     mainShader.setVec2("uvScale", glm::vec2(2.0f, 1.0f));
     cube.draw(mainShader.ID);
 
-    // Ceiling of second room
+    // Ornate full-height stone frame around the left-wall door.
+    glBindTexture(GL_TEXTURE_2D, wallTexture);
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-5.0f, 1.5f, -49.2f));
+    model = glm::scale(model, glm::vec3(0.26f, 5.0f, 1.2f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.72f, 0.62f, 0.45f);
+    mainShader.setVec2("uvScale", glm::vec2(0.8f, 2.0f));
+    cube.draw(mainShader.ID);
+
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-5.0f, 1.5f, -45.8f));
+    model = glm::scale(model, glm::vec3(0.26f, 5.0f, 1.2f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.72f, 0.62f, 0.45f);
+    mainShader.setVec2("uvScale", glm::vec2(0.8f, 2.0f));
+    cube.draw(mainShader.ID);
+
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-5.0f, 3.85f, -47.5f));
+    model = glm::scale(model, glm::vec3(0.26f, 0.3f, 2.2f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.70f, 0.60f, 0.42f);
+    mainShader.setVec2("uvScale", glm::vec2(1.5f, 0.6f));
+    cube.draw(mainShader.ID);
+
+    // Full-height carved door leaves (kept open for access).
+    glBindTexture(GL_TEXTURE_2D, wallTexture);
+    glm::mat4 leftDoorBase = glm::mat4(1.0f);
+    leftDoorBase = glm::translate(leftDoorBase, glm::vec3(-5.0f, 1.5f, -48.25f));
+    leftDoorBase = glm::rotate(leftDoorBase, glm::radians(-68.0f),
+                   glm::vec3(0.0f, 1.0f, 0.0f));
+
+    glm::mat4 leftDoor = glm::scale(leftDoorBase, glm::vec3(0.14f, 5.0f, 1.05f));
+    mainShader.setMat4("model", leftDoor);
+    mainShader.setVec3("objectColor", 0.58f, 0.46f, 0.31f);
+    mainShader.setVec2("uvScale", glm::vec2(1.0f, 3.0f));
+    cube.draw(mainShader.ID);
+
+    glm::mat4 rightDoorBase = glm::mat4(1.0f);
+    rightDoorBase = glm::translate(rightDoorBase, glm::vec3(-5.0f, 1.5f, -46.75f));
+    rightDoorBase = glm::rotate(rightDoorBase, glm::radians(68.0f),
+                  glm::vec3(0.0f, 1.0f, 0.0f));
+
+    glm::mat4 rightDoor =
+      glm::scale(rightDoorBase, glm::vec3(0.14f, 5.0f, 1.05f));
+    mainShader.setMat4("model", rightDoor);
+    mainShader.setVec3("objectColor", 0.58f, 0.46f, 0.31f);
+    mainShader.setVec2("uvScale", glm::vec2(1.0f, 3.0f));
+    cube.draw(mainShader.ID);
+
+    // Bronze-like horizontal straps to evoke the reference tomb door style.
+    mainShader.setBool("useTexture", false);
+    mainShader.setVec3("objectColor", 0.28f, 0.19f, 0.10f);
+
+    glm::mat4 leftBandTop =
+      glm::translate(leftDoorBase, glm::vec3(0.04f, 1.2f, 0.0f));
+    leftBandTop = glm::scale(leftBandTop, glm::vec3(0.03f, 0.12f, 1.0f));
+    mainShader.setMat4("model", leftBandTop);
+    cube.draw(mainShader.ID);
+
+    glm::mat4 leftBandMid =
+      glm::translate(leftDoorBase, glm::vec3(0.04f, -0.1f, 0.0f));
+    leftBandMid = glm::scale(leftBandMid, glm::vec3(0.03f, 0.10f, 1.0f));
+    mainShader.setMat4("model", leftBandMid);
+    cube.draw(mainShader.ID);
+
+    glm::mat4 rightBandTop =
+      glm::translate(rightDoorBase, glm::vec3(-0.04f, 1.2f, 0.0f));
+    rightBandTop = glm::scale(rightBandTop, glm::vec3(0.03f, 0.12f, 1.0f));
+    mainShader.setMat4("model", rightBandTop);
+    cube.draw(mainShader.ID);
+
+    glm::mat4 rightBandMid =
+      glm::translate(rightDoorBase, glm::vec3(-0.04f, -0.1f, 0.0f));
+    rightBandMid = glm::scale(rightBandMid, glm::vec3(0.03f, 0.10f, 1.0f));
+    mainShader.setMat4("model", rightBandMid);
+    cube.draw(mainShader.ID);
+
+    mainShader.setBool("useTexture", texturesEnabled);
+
+    // Second room chamber on the left side of the main hall.
     glBindTexture(GL_TEXTURE_2D, floorTexture);
     model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, 4.05f, -62.5f));
-    model = glm::scale(model, glm::vec3(10.0f, 0.1f, 25.0f));
+    model = glm::translate(model, glm::vec3(-12.0f, -1.0f, -47.5f));
+    model = glm::scale(model, glm::vec3(14.0f, 0.1f, 10.0f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.6f, 0.55f, 0.5f);
+    mainShader.setVec2("uvScale", glm::vec2(7.0f, 5.0f));
+    cube.draw(mainShader.ID);
+
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-12.0f, 4.05f, -47.5f));
+    model = glm::scale(model, glm::vec3(14.0f, 0.1f, 10.0f));
     mainShader.setMat4("model", model);
     mainShader.setVec3("objectColor", 0.45f, 0.35f, 0.25f);
-    mainShader.setVec2("uvScale", glm::vec2(2.0f, 5.0f));
+    mainShader.setVec2("uvScale", glm::vec2(3.0f, 2.5f));
+    cube.draw(mainShader.ID);
+
+    glBindTexture(GL_TEXTURE_2D, wallTexture);
+    // Outer left wall of side chamber
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-19.0f, 1.5f, -47.5f));
+    model = glm::scale(model, glm::vec3(0.2f, 5.0f, 10.0f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
+    mainShader.setVec2("uvScale", glm::vec2(1.5f, 2.0f));
+    cube.draw(mainShader.ID);
+
+    // Chamber north wall
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-12.0f, 1.5f, -52.5f));
+    model = glm::scale(model, glm::vec3(14.0f, 5.0f, 0.2f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.68f, 0.58f, 0.38f);
+    mainShader.setVec2("uvScale", glm::vec2(2.8f, 1.0f));
+    cube.draw(mainShader.ID);
+
+    // Chamber south wall
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-12.0f, 1.5f, -42.5f));
+    model = glm::scale(model, glm::vec3(14.0f, 5.0f, 0.2f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.68f, 0.58f, 0.38f);
+    mainShader.setVec2("uvScale", glm::vec2(2.8f, 1.0f));
     cube.draw(mainShader.ID);
 
     // Front wall cap to keep the view enclosed inside the tomb
