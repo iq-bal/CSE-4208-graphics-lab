@@ -336,31 +336,31 @@ int main() {
       cube.draw(mainShader.ID);
     }
 
-    // Gateway wall to second chamber (door opening on right side)
+    // Gateway wall to second chamber (door opening on left side)
     mainShader.setBool("useTexture", texturesEnabled);
     glBindTexture(GL_TEXTURE_2D, wallTexture);
 
-    // Large left section
+    // Narrow left edge section
     model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(-1.6f, 1.5f, -50.0f));
-    model = glm::scale(model, glm::vec3(6.8f, 5.0f, 0.2f));
-    mainShader.setMat4("model", model);
-    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
-    mainShader.setVec2("uvScale", glm::vec2(2.0f, 1.0f));
-    cube.draw(mainShader.ID);
-
-    // Narrow right edge section
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(4.8f, 1.5f, -50.0f));
+    model = glm::translate(model, glm::vec3(-4.8f, 1.5f, -50.0f));
     model = glm::scale(model, glm::vec3(0.4f, 5.0f, 0.2f));
     mainShader.setMat4("model", model);
     mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
     mainShader.setVec2("uvScale", glm::vec2(0.5f, 1.0f));
     cube.draw(mainShader.ID);
 
+    // Large right section
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(1.6f, 1.5f, -50.0f));
+    model = glm::scale(model, glm::vec3(6.8f, 5.0f, 0.2f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
+    mainShader.setVec2("uvScale", glm::vec2(2.0f, 1.0f));
+    cube.draw(mainShader.ID);
+
     // Lintel above doorway
     model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(3.2f, 3.35f, -50.0f));
+    model = glm::translate(model, glm::vec3(-3.2f, 3.35f, -50.0f));
     model = glm::scale(model, glm::vec3(2.8f, 1.7f, 0.2f));
     mainShader.setMat4("model", model);
     mainShader.setVec3("objectColor", 0.6f, 0.5f, 0.35f);
@@ -370,7 +370,7 @@ int main() {
     // Carved stone door leaves, set open so player can enter
     glBindTexture(GL_TEXTURE_2D, pillarTexture);
     glm::mat4 leftDoor = glm::mat4(1.0f);
-    leftDoor = glm::translate(leftDoor, glm::vec3(2.2f, 0.7f, -49.7f));
+    leftDoor = glm::translate(leftDoor, glm::vec3(-4.2f, 0.7f, -49.7f));
     leftDoor =
       glm::rotate(leftDoor, glm::radians(72.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     leftDoor = glm::scale(leftDoor, glm::vec3(1.1f, 3.4f, 0.12f));
@@ -380,7 +380,7 @@ int main() {
     cube.draw(mainShader.ID);
 
     glm::mat4 rightDoor = glm::mat4(1.0f);
-    rightDoor = glm::translate(rightDoor, glm::vec3(4.2f, 0.7f, -49.7f));
+  rightDoor = glm::translate(rightDoor, glm::vec3(-2.2f, 0.7f, -49.7f));
     rightDoor = glm::rotate(rightDoor, glm::radians(-72.0f),
                 glm::vec3(0.0f, 1.0f, 0.0f));
     rightDoor = glm::scale(rightDoor, glm::vec3(1.1f, 3.4f, 0.12f));
