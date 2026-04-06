@@ -519,6 +519,34 @@ int main() {
     mainShader.setVec2("uvScale", glm::vec2(2.8f, 1.0f));
     cube.draw(mainShader.ID);
 
+    // Seal shared boundary around the doorway to remove thin void gaps.
+    // North side seal
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-5.0f, 1.5f, -50.35f));
+    model = glm::scale(model, glm::vec3(0.2f, 5.0f, 3.2f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
+    mainShader.setVec2("uvScale", glm::vec2(0.8f, 1.0f));
+    cube.draw(mainShader.ID);
+
+    // South side seal
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-5.0f, 1.5f, -44.65f));
+    model = glm::scale(model, glm::vec3(0.2f, 5.0f, 3.2f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
+    mainShader.setVec2("uvScale", glm::vec2(0.8f, 1.0f));
+    cube.draw(mainShader.ID);
+
+    // Tiny top seam cap to avoid hairline crack at the ceiling-edge junction.
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-5.0f, 4.03f, -47.5f));
+    model = glm::scale(model, glm::vec3(0.2f, 0.06f, 2.5f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.68f, 0.58f, 0.40f);
+    mainShader.setVec2("uvScale", glm::vec2(0.8f, 0.5f));
+    cube.draw(mainShader.ID);
+
     // Chamber south wall
     model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(-12.0f, 1.5f, -42.5f));
@@ -690,8 +718,17 @@ void processInput(GLFWwindow *window) {
 }
 
 void constrainCameraToTomb() {
-  // Keep player in main hall until puzzle solved, but allow stepping up to door.
-  float minX = sideDoorUnlocked ? CAMERA_MIN_X : -5.2f;
+  // Keep player inside modeled spaces only:
+  // - Main hall: x in [-4.6, 4.6]
+  // - Side chamber: x in [CAMERA_MIN_X, 4.6], but only around chamber z span
+  float minX;
+  if (!sideDoorUnlocked) {
+    // Allow stepping up to the locked door, but not into side chamber.
+    minX = -5.2f;
+  } else {
+    bool inSideChamberZ = (camera.Position.z >= -52.8f && camera.Position.z <= -42.2f);
+    minX = inSideChamberZ ? CAMERA_MIN_X : -4.6f;
+  }
   camera.Position.x = glm::clamp(camera.Position.x, minX, CAMERA_MAX_X);
   camera.Position.z = glm::clamp(camera.Position.z, CAMERA_MIN_Z, CAMERA_MAX_Z);
   camera.Position.y = CAMERA_EYE_HEIGHT;
@@ -721,7 +758,7 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
 }
 
 void char_callback(GLFWwindow *window, unsigned int codepoint) {
-  if (!sideDoorPlayerNearby || sideDoorUnlocked)
+  if (!sideDoorZoneMuted || sideDoorUnlocked)
     return;
 
   if (codepoint >= 'a' && codepoint <= 'z')
@@ -735,7 +772,10 @@ void char_callback(GLFWwindow *window, unsigned int codepoint) {
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action,
                   int mods) {
-  if (!sideDoorPlayerNearby || sideDoorUnlocked || action != GLFW_PRESS)
+  if (!sideDoorZoneMuted || sideDoorUnlocked)
+    return;
+
+  if (action != GLFW_PRESS && action != GLFW_REPEAT)
     return;
 
   if (key == GLFW_KEY_BACKSPACE) {
