@@ -52,7 +52,7 @@ bool texturesEnabled = true;
 const float CAMERA_EYE_HEIGHT = 1.5f;
 const float CAMERA_MIN_X = -4.6f;
 const float CAMERA_MAX_X = 4.6f;
-const float CAMERA_MIN_Z = -49.0f;
+const float CAMERA_MIN_Z = -74.0f;
 const float CAMERA_MAX_Z = -0.8f;
 
 // Lighting
@@ -87,6 +87,12 @@ const LanternInfo lanterns[] = {
     {{4.75f, 2.2f, -27.5f}, -1.0f}, {{4.75f, 2.2f, -37.5f}, -1.0f},
 };
 const int NUM_LANTERNS = 8;
+
+const LanternInfo secondRoomLanterns[] = {
+  {{-4.75f, 2.2f, -57.5f}, 1.0f}, {{-4.75f, 2.2f, -67.5f}, 1.0f},
+  {{4.75f, 2.2f, -57.5f}, -1.0f}, {{4.75f, 2.2f, -67.5f}, -1.0f},
+};
+const int NUM_SECOND_ROOM_LANTERNS = 4;
 
 int main() {
   // glfw: initialize and configure
@@ -181,11 +187,13 @@ int main() {
     mainShader.setVec3("viewPos", camera.Position);
 
     // ========== LIGHTING ==========
-    // 8 lantern point lights with warm fire color
-    for (int i = 0; i < NUM_LANTERNS; i++) {
-      std::string prefix = "pointLights[" + std::to_string(i) + "]";
+    // Lantern point lights with warm fire color (corridor + second room)
+    int lightIndex = 0;
+    for (int i = 0; i < NUM_LANTERNS; i++, lightIndex++) {
+      std::string prefix = "pointLights[" + std::to_string(lightIndex) + "]";
       // Slight flicker effect
-      float flicker = 0.9f + 0.1f * sin(currentFrame * 8.0f + i * 1.7f);
+      float flicker =
+          0.9f + 0.1f * sin(currentFrame * 8.0f + lightIndex * 1.7f);
       mainShader.setVec3(prefix + ".position",
                          lanterns[i].position +
                              glm::vec3(lanterns[i].facingX * 0.3f, 0.3f, 0.0f));
@@ -204,7 +212,32 @@ int main() {
       mainShader.setFloat(prefix + ".linear", 0.22f); // Sharper falloff
       mainShader.setFloat(prefix + ".quadratic", 0.12f);
     }
-    mainShader.setInt("numPointLights", NUM_LANTERNS);
+
+    for (int i = 0; i < NUM_SECOND_ROOM_LANTERNS; i++, lightIndex++) {
+      std::string prefix = "pointLights[" + std::to_string(lightIndex) + "]";
+      float flicker =
+          0.9f + 0.1f * sin(currentFrame * 8.0f + lightIndex * 1.7f);
+      mainShader.setVec3(
+          prefix + ".position",
+          secondRoomLanterns[i].position +
+              glm::vec3(secondRoomLanterns[i].facingX * 0.3f, 0.3f, 0.0f));
+
+      if (lanternsOn) {
+        mainShader.setVec3(prefix + ".ambient", 0.06f, 0.04f, 0.02f);
+        mainShader.setVec3(prefix + ".diffuse", 1.0f * flicker,
+                           0.55f * flicker, 0.15f * flicker);
+        mainShader.setVec3(prefix + ".specular", 0.6f, 0.4f, 0.1f);
+      } else {
+        mainShader.setVec3(prefix + ".ambient", 0.0f, 0.0f, 0.0f);
+        mainShader.setVec3(prefix + ".diffuse", 0.0f, 0.0f, 0.0f);
+        mainShader.setVec3(prefix + ".specular", 0.0f, 0.0f, 0.0f);
+      }
+      mainShader.setFloat(prefix + ".constant", 1.0f);
+      mainShader.setFloat(prefix + ".linear", 0.22f);
+      mainShader.setFloat(prefix + ".quadratic", 0.12f);
+    }
+
+    mainShader.setInt("numPointLights", lightIndex);
 
     // SpotLight (Flashlight) – dim for atmosphere
     mainShader.setVec3("spotLight.position", camera.Position);
@@ -236,12 +269,12 @@ int main() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, floorTexture);
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, -1.0f, -20.0f));
-    model = glm::scale(model, glm::vec3(10.0f, 0.1f, 60.0f));
+    model = glm::translate(model, glm::vec3(0.0f, -1.0f, -32.5f));
+    model = glm::scale(model, glm::vec3(10.0f, 0.1f, 85.0f));
     mainShader.setMat4("model", model);
     mainShader.setVec3("objectColor", 0.6f, 0.55f, 0.5f);
     mainShader.setBool("useTexture", texturesEnabled);
-    mainShader.setVec2("uvScale", glm::vec2(5.0f, 30.0f));
+    mainShader.setVec2("uvScale", glm::vec2(5.0f, 42.5f));
     cube.draw(mainShader.ID);
 
     // Segmented Walls, Ceiling, and Dividers
@@ -303,15 +336,97 @@ int main() {
       cube.draw(mainShader.ID);
     }
 
-    // Back wall
+    // Gateway wall to second chamber (door opening on right side)
     mainShader.setBool("useTexture", texturesEnabled);
-    glBindTexture(GL_TEXTURE_2D, wallTexture); // Fix: Use wall texture
+    glBindTexture(GL_TEXTURE_2D, wallTexture);
+
+    // Large left section
     model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, 1.5f, -50.0f));
-    model = glm::scale(model, glm::vec3(10.0f, 5.0f, 0.2f));
+    model = glm::translate(model, glm::vec3(-1.6f, 1.5f, -50.0f));
+    model = glm::scale(model, glm::vec3(6.8f, 5.0f, 0.2f));
     mainShader.setMat4("model", model);
     mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
-    mainShader.setVec2("uvScale", glm::vec2(2.0f, 1.0f)); // Wide wall
+    mainShader.setVec2("uvScale", glm::vec2(2.0f, 1.0f));
+    cube.draw(mainShader.ID);
+
+    // Narrow right edge section
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(4.8f, 1.5f, -50.0f));
+    model = glm::scale(model, glm::vec3(0.4f, 5.0f, 0.2f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
+    mainShader.setVec2("uvScale", glm::vec2(0.5f, 1.0f));
+    cube.draw(mainShader.ID);
+
+    // Lintel above doorway
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(3.2f, 3.35f, -50.0f));
+    model = glm::scale(model, glm::vec3(2.8f, 1.7f, 0.2f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.6f, 0.5f, 0.35f);
+    mainShader.setVec2("uvScale", glm::vec2(1.2f, 1.0f));
+    cube.draw(mainShader.ID);
+
+    // Carved stone door leaves, set open so player can enter
+    glBindTexture(GL_TEXTURE_2D, pillarTexture);
+    glm::mat4 leftDoor = glm::mat4(1.0f);
+    leftDoor = glm::translate(leftDoor, glm::vec3(2.2f, 0.7f, -49.7f));
+    leftDoor =
+      glm::rotate(leftDoor, glm::radians(72.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    leftDoor = glm::scale(leftDoor, glm::vec3(1.1f, 3.4f, 0.12f));
+    mainShader.setMat4("model", leftDoor);
+    mainShader.setVec3("objectColor", 0.55f, 0.45f, 0.3f);
+    mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.8f));
+    cube.draw(mainShader.ID);
+
+    glm::mat4 rightDoor = glm::mat4(1.0f);
+    rightDoor = glm::translate(rightDoor, glm::vec3(4.2f, 0.7f, -49.7f));
+    rightDoor = glm::rotate(rightDoor, glm::radians(-72.0f),
+                glm::vec3(0.0f, 1.0f, 0.0f));
+    rightDoor = glm::scale(rightDoor, glm::vec3(1.1f, 3.4f, 0.12f));
+    mainShader.setMat4("model", rightDoor);
+    mainShader.setVec3("objectColor", 0.55f, 0.45f, 0.3f);
+    mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.8f));
+    cube.draw(mainShader.ID);
+
+    // Second room beyond the doorway
+    glBindTexture(GL_TEXTURE_2D, wallTexture);
+
+    // Left wall
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-5.0f, 1.5f, -62.5f));
+    model = glm::scale(model, glm::vec3(0.2f, 5.0f, 25.0f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
+    mainShader.setVec2("uvScale", glm::vec2(1.5f, 5.0f));
+    cube.draw(mainShader.ID);
+
+    // Right wall
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(5.0f, 1.5f, -62.5f));
+    model = glm::scale(model, glm::vec3(0.2f, 5.0f, 25.0f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.4f);
+    mainShader.setVec2("uvScale", glm::vec2(1.5f, 5.0f));
+    cube.draw(mainShader.ID);
+
+    // Back wall of second room
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0f, 1.5f, -75.0f));
+    model = glm::scale(model, glm::vec3(10.0f, 5.0f, 0.2f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.68f, 0.58f, 0.38f);
+    mainShader.setVec2("uvScale", glm::vec2(2.0f, 1.0f));
+    cube.draw(mainShader.ID);
+
+    // Ceiling of second room
+    glBindTexture(GL_TEXTURE_2D, floorTexture);
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0f, 4.05f, -62.5f));
+    model = glm::scale(model, glm::vec3(10.0f, 0.1f, 25.0f));
+    mainShader.setMat4("model", model);
+    mainShader.setVec3("objectColor", 0.45f, 0.35f, 0.25f);
+    mainShader.setVec2("uvScale", glm::vec2(2.0f, 5.0f));
     cube.draw(mainShader.ID);
 
     // Front wall cap to keep the view enclosed inside the tomb
@@ -336,6 +451,15 @@ int main() {
       lm = glm::scale(lm, glm::vec3(lanterns[i].facingX, 1.0f, 1.0f));
       // Pass lanternsOn and texturesEnabled to drawLantern
       drawLantern(mainShader, cube, cylinder, lm, lanternsOn ? currentFrame : 0.0f, lanternTexture, texturesEnabled);
+    }
+
+    for (int i = 0; i < NUM_SECOND_ROOM_LANTERNS; i++) {
+      glm::mat4 lm = glm::mat4(1.0f);
+      lm = glm::translate(lm, secondRoomLanterns[i].position);
+      lm = glm::scale(lm, glm::vec3(secondRoomLanterns[i].facingX, 1.0f, 1.0f));
+      drawLantern(mainShader, cube, cylinder, lm,
+                  lanternsOn ? currentFrame : 0.0f, lanternTexture,
+                  texturesEnabled);
     }
 
     // 7. Sarcophagus (Hierarchical + Interactive)
