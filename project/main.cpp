@@ -440,58 +440,73 @@ int main() {
       // Pyramid Geometry - draw each step as separate face panels
       glActiveTexture(GL_TEXTURE0);
       mainShader.setVec3("objectColor", 0.85f, 0.75f, 0.65f);
-      float baseSize = 90.0f;
-      float heightPerStep = 1.0f;
-      int numSteps = 45;
-      float stepShrink = baseSize / numSteps;
-      float tileSize = 2.0f;
-      float pyrCenter = -15.0f;
+      const float tileSize = 2.0f;
+      const float heightPerStep = 1.0f;
+      struct PyramidLayout {
+        float centerX;
+        float centerZ;
+        float baseSize;
+        int numSteps;
+      };
+      const PyramidLayout pyramids[] = {
+          {0.0f, -15.0f, 90.0f, 45},     // Main pyramid (center)
+          {-86.0f, -34.0f, 66.0f, 33},   // Second pyramid (left/back), fully separate
+          {92.0f, -42.0f, 74.0f, 37},    // Third pyramid (right/back), fully separate
+      };
 
-      for (int i = 0; i < numSteps; i++) {
-        float size = baseSize - i * stepShrink;
-        float yPos = i * heightPerStep + heightPerStep * 0.5f;
-        float halfSize = size * 0.5f;
+      auto drawSteppedPyramid = [&](float centerX, float centerZ, float baseSize, int numSteps) {
+        float stepShrink = baseSize / static_cast<float>(numSteps);
+        for (int i = 0; i < numSteps; i++) {
+          float size = baseSize - i * stepShrink;
+          float yPos = i * heightPerStep + heightPerStep * 0.5f;
+          float halfSize = size * 0.5f;
 
-        glBindTexture(GL_TEXTURE_2D, pyramidTexture);
-        mainShader.setVec2("uvScale", glm::vec2(size / tileSize, heightPerStep / tileSize));
+          glBindTexture(GL_TEXTURE_2D, pyramidTexture);
+          mainShader.setVec2("uvScale", glm::vec2(size / tileSize, heightPerStep / tileSize));
 
-        // Front face (Z+ side)
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, yPos, pyrCenter + halfSize));
-        model = glm::scale(model, glm::vec3(size, heightPerStep, 0.1f));
-        mainShader.setMat4("model", model);
-        cube.draw(mainShader.ID);
+          // Front face (Z+ side)
+          model = glm::mat4(1.0f);
+          model = glm::translate(model, glm::vec3(centerX, yPos, centerZ + halfSize));
+          model = glm::scale(model, glm::vec3(size, heightPerStep, 0.1f));
+          mainShader.setMat4("model", model);
+          cube.draw(mainShader.ID);
 
-        // Back face (Z- side)
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, yPos, pyrCenter - halfSize));
-        model = glm::scale(model, glm::vec3(size, heightPerStep, 0.1f));
-        mainShader.setMat4("model", model);
-        cube.draw(mainShader.ID);
+          // Back face (Z- side)
+          model = glm::mat4(1.0f);
+          model = glm::translate(model, glm::vec3(centerX, yPos, centerZ - halfSize));
+          model = glm::scale(model, glm::vec3(size, heightPerStep, 0.1f));
+          mainShader.setMat4("model", model);
+          cube.draw(mainShader.ID);
 
-        // Left face (X- side) - rotated so front face points left
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-halfSize, yPos, pyrCenter));
-        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(size, heightPerStep, 0.1f));
-        mainShader.setMat4("model", model);
-        cube.draw(mainShader.ID);
+          // Left face (X- side) - rotated so front face points left
+          model = glm::mat4(1.0f);
+          model = glm::translate(model, glm::vec3(centerX - halfSize, yPos, centerZ));
+          model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+          model = glm::scale(model, glm::vec3(size, heightPerStep, 0.1f));
+          mainShader.setMat4("model", model);
+          cube.draw(mainShader.ID);
 
-        // Right face (X+ side) - rotated so front face points right
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(halfSize, yPos, pyrCenter));
-        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(size, heightPerStep, 0.1f));
-        mainShader.setMat4("model", model);
-        cube.draw(mainShader.ID);
+          // Right face (X+ side) - rotated so front face points right
+          model = glm::mat4(1.0f);
+          model = glm::translate(model, glm::vec3(centerX + halfSize, yPos, centerZ));
+          model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+          model = glm::scale(model, glm::vec3(size, heightPerStep, 0.1f));
+          mainShader.setMat4("model", model);
+          cube.draw(mainShader.ID);
 
-        // Top face (step ledge)
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, yPos + heightPerStep * 0.5f, pyrCenter));
-        model = glm::scale(model, glm::vec3(size, 0.1f, size));
-        mainShader.setMat4("model", model);
-        mainShader.setVec2("uvScale", glm::vec2(size / tileSize, size / tileSize));
-        cube.draw(mainShader.ID);
+          // Top face (step ledge)
+          model = glm::mat4(1.0f);
+          model = glm::translate(model, glm::vec3(centerX, yPos + heightPerStep * 0.5f, centerZ));
+          model = glm::scale(model, glm::vec3(size, 0.1f, size));
+          mainShader.setMat4("model", model);
+          mainShader.setVec2("uvScale", glm::vec2(size / tileSize, size / tileSize));
+          cube.draw(mainShader.ID);
+        }
+      };
+
+      for (const PyramidLayout &pyramid : pyramids) {
+        drawSteppedPyramid(pyramid.centerX, pyramid.centerZ,
+                           pyramid.baseSize, pyramid.numSteps);
       }
 
       // Entrance Vestibule
@@ -538,8 +553,7 @@ int main() {
       mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
 
       // === CAMELS ===
-      const glm::vec3 pyramidCenter(0.0f, 0.0f, -15.0f);
-      const float minCamelToPyramid = 70.0f;
+      const float minCamelToPyramidPadding = 25.0f;
       const float minCamelToPlayer = 42.0f;
       for (int i = 0; i < NUM_CAMELS; i++) {
         float angle = currentFrame * camels[i].speed + camels[i].phaseOffset;
@@ -547,7 +561,16 @@ int main() {
         float cz = camels[i].center.z + sin(angle) * camels[i].radius;
 
         glm::vec3 camelPos(cx, 0.0f, cz);
-        if (glm::distance(camelPos, pyramidCenter) < minCamelToPyramid) {
+        bool tooCloseToAnyPyramid = false;
+        for (const PyramidLayout &pyramid : pyramids) {
+          glm::vec3 pyramidCenter(pyramid.centerX, 0.0f, pyramid.centerZ);
+          float minCamelToPyramid = pyramid.baseSize * 0.5f + minCamelToPyramidPadding;
+          if (glm::distance(camelPos, pyramidCenter) < minCamelToPyramid) {
+            tooCloseToAnyPyramid = true;
+            break;
+          }
+        }
+        if (tooCloseToAnyPyramid) {
           continue;
         }
         if (glm::distance(camelPos, camera.Position) < minCamelToPlayer) {
@@ -1037,8 +1060,8 @@ void processInput(GLFWwindow *window) {
 
 void constrainCameraToTomb() {
   if (inExterior) {
-    camera.Position.x = glm::clamp(camera.Position.x, -140.0f, 140.0f);
-    camera.Position.z = glm::clamp(camera.Position.z, 33.0f, 160.0f);
+    camera.Position.x = glm::clamp(camera.Position.x, -220.0f, 220.0f);
+    camera.Position.z = glm::clamp(camera.Position.z, -170.0f, 190.0f);
     camera.Position.y = CAMERA_EYE_HEIGHT;
     return;
   }
