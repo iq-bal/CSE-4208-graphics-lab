@@ -42,6 +42,7 @@ float lastFrame = 0.0f;
 bool bladeActive = true;
 float bladeAngle = 0.0f;
 float bladeTime = 0.0f;
+bool multiViewportMode = true;
 
 bool sarcophagusOpen = false;
 float sarcophagusSlide = 0.0f;
@@ -298,13 +299,11 @@ int main() {
     mainShader.use();
 
     // View/Proj
-    glm::mat4 projection =
-        glm::perspective(glm::radians(camera.Zoom),
-                         (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
-    glm::mat4 view = camera.GetViewMatrix();
-    mainShader.setMat4("projection", projection);
-    mainShader.setMat4("view", view);
-    mainShader.setVec3("viewPos", camera.Position);
+    auto drawScene = [&](const glm::mat4& viewOutput, const glm::mat4& projOutput, const glm::vec3& camPosOutput, bool isOrtho) {
+        mainShader.setMat4("projection", projOutput);
+        mainShader.setMat4("view", viewOutput);
+        mainShader.setVec3("viewPos", camPosOutput);
+        mainShader.setBool("isDevOrtho", isOrtho);
 
     // ========== LIGHTING ==========
     int lightIndex = 0;
@@ -683,11 +682,13 @@ int main() {
       cube.draw(mainShader.ID);
 
       // --- 2. Ceiling Beams ---
-      model = glm::mat4(1.0f);
-      model = glm::translate(model, glm::vec3(0.0f, 3.85f, zPos));
-      model = glm::scale(model, glm::vec3(10.0f, 0.35f, 0.5f));
-      mainShader.setMat4("model", model);
-      cube.draw(mainShader.ID);
+      if (!isOrtho) {
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, 3.85f, zPos));
+        model = glm::scale(model, glm::vec3(10.0f, 0.35f, 0.5f));
+        mainShader.setMat4("model", model);
+        cube.draw(mainShader.ID);
+      }
 
       // --- 3. Wall Panels (between dividers) ---
       mainShader.setBool("useTexture", texturesEnabled);
@@ -724,14 +725,16 @@ int main() {
       cube.draw(mainShader.ID);
 
       // --- 4. Ceiling Panels (Now using floor_texture as requested) ---
-      glBindTexture(GL_TEXTURE_2D, floorTexture);
-      model = glm::mat4(1.0f);
-      model = glm::translate(model, glm::vec3(0.0f, 4.05f, zPos - 2.5f));
-      model = glm::scale(model, glm::vec3(10.0f, 0.1f, 4.5f));
-      mainShader.setMat4("model", model);
-      mainShader.setVec3("objectColor", 0.45f, 0.35f, 0.25f);
-      mainShader.setVec2("uvScale", glm::vec2(2.0f, 2.0f));
-      cube.draw(mainShader.ID);
+      if (!isOrtho) {
+        glBindTexture(GL_TEXTURE_2D, floorTexture);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, 4.05f, zPos - 2.5f));
+        model = glm::scale(model, glm::vec3(10.0f, 0.1f, 4.5f));
+        mainShader.setMat4("model", model);
+        mainShader.setVec3("objectColor", 0.45f, 0.35f, 0.25f);
+        mainShader.setVec2("uvScale", glm::vec2(2.0f, 2.0f));
+        cube.draw(mainShader.ID);
+      }
     }
 
     // === SWINGING TRAP ===
@@ -910,13 +913,15 @@ int main() {
     mainShader.setVec2("uvScale", glm::vec2(7.0f, 5.0f));
     cube.draw(mainShader.ID);
 
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(-12.0f, 4.05f, -47.5f));
-    model = glm::scale(model, glm::vec3(14.0f, 0.1f, 10.0f));
-    mainShader.setMat4("model", model);
-    mainShader.setVec3("objectColor", 0.45f, 0.35f, 0.25f);
-    mainShader.setVec2("uvScale", glm::vec2(3.0f, 2.5f));
-    cube.draw(mainShader.ID);
+      if (!isOrtho) {
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(-12.0f, 4.05f, -47.5f));
+        model = glm::scale(model, glm::vec3(14.0f, 0.1f, 10.0f));
+        mainShader.setMat4("model", model);
+        mainShader.setVec3("objectColor", 0.45f, 0.35f, 0.25f);
+        mainShader.setVec2("uvScale", glm::vec2(3.0f, 2.5f));
+        cube.draw(mainShader.ID);
+      }
 
     glBindTexture(GL_TEXTURE_2D, wallTexture);
     // Outer left wall of side chamber
@@ -1020,6 +1025,56 @@ int main() {
                     graveyardTexture, texturesEnabled);
 
     }
+    }; // End of drawScene lambda
+
+    int fbWidth, fbHeight;
+    glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+
+    if (!multiViewportMode) {
+      glViewport(0, 0, fbWidth, fbHeight);
+      glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)fbWidth / (float)fbHeight, 0.1f, 2000.0f);
+      glm::mat4 view = camera.GetViewMatrix();
+      drawScene(view, projection, camera.Position, false);
+    } else {
+      int halfW = fbWidth / 2;
+      int halfH = fbHeight / 2;
+      float aspect = (float)halfW / (float)halfH;
+      
+      // Tighten the orthographic scale so cameras act as active "room trackers" rather than full-dungeon maps
+      float orthoScale = 15.0f; 
+      float oW = orthoScale * aspect;
+      float oH = orthoScale;
+
+      // Top-Left: Top View (Orthographic)
+      glViewport(0, halfH, halfW, halfH);
+      glm::mat4 topProj = glm::ortho(-oW, oW, -oH, oH, 0.1f, 2000.0f);
+      glm::vec3 topPos(camera.Position.x, 200.0f, camera.Position.z);
+      glm::mat4 topView = glm::lookAt(topPos, glm::vec3(camera.Position.x, 0.0f, camera.Position.z), glm::vec3(0.0f, 0.0f, -1.0f));
+      drawScene(topView, topProj, topPos, true);
+
+      // Top-Right: Dynamic Front View (Orthographic)
+      // Camera is placed ahead of the player, looking directly back into the player's face
+      glViewport(halfW, halfH, halfW, halfH);
+      glm::mat4 frontProj = glm::ortho(-oW, oW, -oH, oH, 0.1f, 2000.0f);
+      glm::vec3 frontPos = camera.Position + camera.Front * 30.0f; // Pull camera out to view player's front
+      // Look back at the player
+      glm::mat4 frontView = glm::lookAt(frontPos, camera.Position, glm::vec3(0.0f, 1.0f, 0.0f));
+      drawScene(frontView, frontProj, frontPos, true);
+
+      // Bottom-Left: Isometric View (Orthographic)
+      float isoScale = 22.0f; // Slightly wider for isometric map feel
+      glViewport(0, 0, halfW, halfH);
+      glm::mat4 isoProj = glm::ortho(-isoScale * aspect, isoScale * aspect, -isoScale, isoScale, -500.0f, 2000.0f);
+      glm::vec3 isoPos = camera.Position + glm::vec3(40.0f, 40.0f, 40.0f);
+      glm::mat4 isoView = glm::lookAt(isoPos, camera.Position, glm::vec3(0.0f, 1.0f, 0.0f));
+      drawScene(isoView, isoProj, isoPos, true);
+
+      // Bottom-Right: Standard Perspective View
+      glViewport(halfW, 0, halfW, halfH);
+      glm::mat4 perspProj = glm::perspective(glm::radians(camera.Zoom), aspect, 0.1f, 2000.0f);
+      glm::mat4 perspView = camera.GetViewMatrix();
+      drawScene(perspView, perspProj, camera.Position, false);
+    }
 
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -1046,6 +1101,7 @@ void processInput(GLFWwindow *window) {
   static bool iKeyPressed = false;
   static bool oKeyPressed = false;
   static bool hKeyPressed = false;
+  static bool vKeyPressed = false;
 
   float doorDistance = glm::length(camera.Position - SIDE_DOOR_HINT_POS);
   sideDoorPlayerNearby = (doorDistance < SIDE_DOOR_HINT_RADIUS);
@@ -1248,6 +1304,16 @@ void processInput(GLFWwindow *window) {
     }
   } else {
     hKeyPressed = false;
+  }
+
+  // Dev shortcut: toggle 4-viewport mode (V)
+  if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) {
+    if (!vKeyPressed) {
+      multiViewportMode = !multiViewportMode;
+      vKeyPressed = true;
+    }
+  } else {
+    vKeyPressed = false;
   }
 
   // Interaction

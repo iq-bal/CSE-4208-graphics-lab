@@ -37,6 +37,7 @@ uniform int numPointLights;
 uniform PointLight pointLights[16]; // Increased limit to 16 lights
 uniform SpotLight spotLight;
 uniform bool spotLightOn;
+uniform bool isDevOrtho;
 
 uniform vec3 viewPos;
 uniform vec3 objectColor;
@@ -193,6 +194,10 @@ void main()
     // Ambient fallback if no lights
     if (numPointLights == 0 && !spotLightOn)
         result = baseColor * 0.1;
+        
+    if (isDevOrtho) {
+        result += baseColor * 0.45; // Broad global light for architectural developer views
+    }
         
     if (useWaterSurface) {
         // ---- Sun specular highlight ----
