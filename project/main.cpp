@@ -1085,7 +1085,7 @@ void processInput(GLFWwindow *window) {
   if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) {
     if (!kKeyPressed) {
       inExterior = true;
-      camera.Position = glm::vec3(0.0f, CAMERA_EYE_HEIGHT, -120.0f);
+      camera.Position = glm::vec3(0.0f, CAMERA_EYE_HEIGHT, -128.0f);
       camera.Yaw = -90.0f;
       camera.Pitch = -5.0f;
       camera.updateCameraVectors();
