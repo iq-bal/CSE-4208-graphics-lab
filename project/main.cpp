@@ -899,6 +899,7 @@ void processInput(GLFWwindow *window) {
   static bool lKeyPressed = false;
   static bool tKeyPressed = false;
   static bool eKeyPressed = false;
+  static bool jKeyPressed = false;
 
   float doorDistance = glm::length(camera.Position - SIDE_DOOR_HINT_POS);
   sideDoorPlayerNearby = (doorDistance < SIDE_DOOR_HINT_RADIUS);
@@ -987,6 +988,23 @@ void processInput(GLFWwindow *window) {
     camera.Yaw = -90.0f;
     camera.Pitch = 0.0f;
     camera.updateCameraVectors();
+  }
+
+  // Dev shortcut: jump directly into the unlocked second room.
+  if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS) {
+    if (!jKeyPressed) {
+      inExterior = false;
+      sideDoorUnlocked = true;
+      sideDoorOpenAmount = 1.0f;
+      sideDoorZoneMuted = false;
+      camera.Position = glm::vec3(-12.0f, CAMERA_EYE_HEIGHT, -46.6f);
+      camera.Yaw = -90.0f;
+      camera.Pitch = 0.0f;
+      camera.updateCameraVectors();
+      jKeyPressed = true;
+    }
+  } else {
+    jKeyPressed = false;
   }
 
   // Interaction
@@ -1202,71 +1220,6 @@ void drawSecondRoomBurialSet(Shader &shader, Cube &cube, Cylinder &cyl,
   coffinLid = glm::scale(coffinLid, glm::vec3(2.30f, 0.12f, 1.28f));
   shader.setMat4("model", coffinLid);
   shader.setVec2("uvScale", glm::vec2(2.3f, 1.0f));
-  cube.draw(shader.ID);
-
-  // Recumbent anthropoid mummy body in front of the chest
-  shader.setBool("useTexture", useTexture);
-  glBindTexture(GL_TEXTURE_2D, ornamentTexture);
-  shader.setVec3("objectColor", 0.92f, 0.79f, 0.58f);
-
-  glm::mat4 mummyBase = glm::mat4(1.0f);
-  mummyBase = glm::translate(mummyBase, center + glm::vec3(1.18f, 0.76f, 0.86f));
-  mummyBase = glm::rotate(mummyBase, glm::radians(142.0f),
-                          glm::vec3(0.0f, 1.0f, 0.0f));
-  mummyBase = glm::rotate(mummyBase, glm::radians(90.0f),
-                          glm::vec3(1.0f, 0.0f, 0.0f));
-  mummyBase = glm::rotate(mummyBase, glm::radians(4.0f),
-                          glm::vec3(0.0f, 0.0f, 1.0f));
-
-  glm::mat4 mummyTorso = glm::translate(mummyBase, glm::vec3(0.0f, 0.58f, 0.0f));
-  mummyTorso = glm::scale(mummyTorso, glm::vec3(0.54f, 0.66f, 0.34f));
-  shader.setMat4("model", mummyTorso);
-  shader.setVec2("uvScale", glm::vec2(1.2f, 2.0f));
-  cube.draw(shader.ID);
-
-  glm::mat4 mummyShoulders = glm::translate(mummyBase, glm::vec3(0.0f, 0.95f, 0.0f));
-  mummyShoulders = glm::scale(mummyShoulders, glm::vec3(0.70f, 0.22f, 0.40f));
-  shader.setMat4("model", mummyShoulders);
-  shader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
-  cube.draw(shader.ID);
-
-  glm::mat4 mummyHips = glm::translate(mummyBase, glm::vec3(0.0f, 0.26f, 0.0f));
-  mummyHips = glm::scale(mummyHips, glm::vec3(0.50f, 0.30f, 0.32f));
-  shader.setMat4("model", mummyHips);
-  cube.draw(shader.ID);
-
-  glm::mat4 mummyLegsTop = glm::translate(mummyBase, glm::vec3(0.0f, -0.16f, 0.0f));
-  mummyLegsTop = glm::scale(mummyLegsTop, glm::vec3(0.40f, 0.44f, 0.28f));
-  shader.setMat4("model", mummyLegsTop);
-  cube.draw(shader.ID);
-
-  glm::mat4 mummyLegsLow = glm::translate(mummyBase, glm::vec3(0.0f, -0.52f, 0.0f));
-  mummyLegsLow = glm::scale(mummyLegsLow, glm::vec3(0.30f, 0.36f, 0.24f));
-  shader.setMat4("model", mummyLegsLow);
-  cube.draw(shader.ID);
-
-  glm::mat4 mummyFeet = glm::translate(mummyBase, glm::vec3(0.0f, -0.78f, 0.0f));
-  mummyFeet = glm::scale(mummyFeet, glm::vec3(0.24f, 0.16f, 0.20f));
-  shader.setMat4("model", mummyFeet);
-  cube.draw(shader.ID);
-
-  // Crossed arm wraps on chest.
-  glm::mat4 armA = glm::translate(mummyBase, glm::vec3(0.0f, 0.70f, 0.09f));
-  armA = glm::rotate(armA, glm::radians(28.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-  armA = glm::scale(armA, glm::vec3(0.46f, 0.08f, 0.10f));
-  shader.setMat4("model", armA);
-  cube.draw(shader.ID);
-
-  glm::mat4 armB = glm::translate(mummyBase, glm::vec3(0.0f, 0.66f, -0.09f));
-  armB = glm::rotate(armB, glm::radians(-28.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-  armB = glm::scale(armB, glm::vec3(0.46f, 0.08f, 0.10f));
-  shader.setMat4("model", armB);
-  cube.draw(shader.ID);
-
-  glm::mat4 mummyHead = glm::translate(mummyBase, glm::vec3(0.0f, 1.20f, 0.0f));
-  mummyHead = glm::scale(mummyHead, glm::vec3(0.48f, 0.24f, 0.40f));
-  shader.setMat4("model", mummyHead);
-  shader.setVec2("uvScale", glm::vec2(0.8f, 0.8f));
   cube.draw(shader.ID);
 
   // Gold trim strips on coffin
