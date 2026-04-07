@@ -1055,7 +1055,7 @@ int main() {
       // Scale facing direction
       lm = glm::scale(lm, glm::vec3(lanterns[i].facingX, 1.0f, 1.0f));
       // Pass lanternsOn and texturesEnabled to drawLantern
-      drawLantern(mainShader, cube, cylinder, lm, lanternsOn ? currentFrame : 0.0f, lanternTexture, texturesEnabled);
+      drawLantern(mainShader, cube, cylinder, lm, (lanternsOn && pointLightsOn) ? currentFrame : 0.0f, lanternTexture, texturesEnabled);
     }
 
     for (int i = 0; i < NUM_SECOND_ROOM_LANTERNS; i++) {
@@ -1063,7 +1063,7 @@ int main() {
       lm = glm::translate(lm, secondRoomLanterns[i].position);
       lm = glm::scale(lm, glm::vec3(secondRoomLanterns[i].facingX, 1.0f, 1.0f));
       drawLantern(mainShader, cube, cylinder, lm,
-                  lanternsOn ? currentFrame : 0.0f, lanternTexture,
+                  (lanternsOn && pointLightsOn) ? currentFrame : 0.0f, lanternTexture,
                   texturesEnabled);
     }
 
