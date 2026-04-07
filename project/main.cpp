@@ -29,7 +29,7 @@ const unsigned int SCR_HEIGHT = 800;
 bool inExterior = true;
 
 // Camera
-Camera camera(glm::vec3(0.0f, 1.5f, 40.0f));
+Camera camera(glm::vec3(0.0f, 2.0f, 75.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -788,7 +788,7 @@ void processInput(GLFWwindow *window) {
   if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
     // Reset camera position and orientation
     if (inExterior) {
-      camera.Position = glm::vec3(0.0f, CAMERA_EYE_HEIGHT, 40.0f);
+      camera.Position = glm::vec3(0.0f, 2.0f, 75.0f);
     } else {
       camera.Position = glm::vec3(0.0f, CAMERA_EYE_HEIGHT, -5.0f);
     }
@@ -828,7 +828,7 @@ void processInput(GLFWwindow *window) {
 void constrainCameraToTomb() {
   if (inExterior) {
     camera.Position.x = glm::clamp(camera.Position.x, -140.0f, 140.0f);
-    camera.Position.z = glm::clamp(camera.Position.z, 33.0f, 140.0f); 
+    camera.Position.z = glm::clamp(camera.Position.z, 33.0f, 160.0f);
     camera.Position.y = CAMERA_EYE_HEIGHT;
     return;
   }
