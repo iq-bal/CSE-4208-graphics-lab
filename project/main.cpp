@@ -88,6 +88,9 @@ void constrainCameraToTomb();
 
 void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
                      float slideAmount, unsigned int textureID, bool useTexture);
+void drawSecondRoomBurialSet(Shader &shader, Cube &cube, Cylinder &cyl,
+                             glm::vec3 center, unsigned int stoneTexture,
+                             unsigned int ornamentTexture, bool useTexture);
 void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
                  float time, unsigned int textureID, bool useTexture);
 void drawCamel(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 rootModel,
@@ -351,6 +354,25 @@ int main() {
       mainShader.setFloat(prefix + ".constant", 1.0f);
       mainShader.setFloat(prefix + ".linear", 0.22f);
       mainShader.setFloat(prefix + ".quadratic", 0.12f);
+    }
+
+    // Focused fill for the second-room burial display.
+    {
+      std::string prefix = "pointLights[" + std::to_string(lightIndex) + "]";
+      mainShader.setVec3(prefix + ".position", glm::vec3(-11.2f, 1.65f, -47.1f));
+      if (lanternsOn) {
+        mainShader.setVec3(prefix + ".ambient", 0.04f, 0.03f, 0.02f);
+        mainShader.setVec3(prefix + ".diffuse", 0.62f, 0.46f, 0.30f);
+        mainShader.setVec3(prefix + ".specular", 0.26f, 0.20f, 0.12f);
+      } else {
+        mainShader.setVec3(prefix + ".ambient", 0.0f, 0.0f, 0.0f);
+        mainShader.setVec3(prefix + ".diffuse", 0.0f, 0.0f, 0.0f);
+        mainShader.setVec3(prefix + ".specular", 0.0f, 0.0f, 0.0f);
+      }
+      mainShader.setFloat(prefix + ".constant", 1.0f);
+      mainShader.setFloat(prefix + ".linear", 0.18f);
+      mainShader.setFloat(prefix + ".quadratic", 0.08f);
+      lightIndex++;
     }
     }
 
@@ -812,6 +834,11 @@ int main() {
     mainShader.setVec2("uvScale", glm::vec2(2.8f, 1.0f));
     cube.draw(mainShader.ID);
 
+    // Hero burial composition in the second chamber (unlocked by DHARAGOL door).
+    drawSecondRoomBurialSet(mainShader, cube, cylinder,
+                glm::vec3(-12.0f, -0.95f, -47.5f),
+                floorTexture, graveyardTexture, texturesEnabled);
+
     // Front wall cap to keep the view enclosed inside the tomb
     model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.35f));
@@ -1124,6 +1151,142 @@ void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
   shader.setMat4("model", lid);
   shader.setVec3("objectColor", 1.0f, 1.0f, 1.0f); // Bright for lid detail
   cube.draw(shader.ID);
+}
+
+void drawSecondRoomBurialSet(Shader &shader, Cube &cube, Cylinder &cyl,
+                             glm::vec3 center, unsigned int stoneTexture,
+                             unsigned int ornamentTexture, bool useTexture) {
+  shader.setBool("rotateUV90", false);
+  shader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
+
+  // Layered stone dais
+  shader.setBool("useTexture", useTexture);
+  glBindTexture(GL_TEXTURE_2D, stoneTexture);
+  shader.setVec3("objectColor", 0.62f, 0.56f, 0.48f);
+
+  glm::mat4 step1 = glm::mat4(1.0f);
+  step1 = glm::translate(step1, center + glm::vec3(0.0f, 0.18f, 0.0f));
+  step1 = glm::scale(step1, glm::vec3(6.6f, 0.36f, 5.6f));
+  shader.setMat4("model", step1);
+  shader.setVec2("uvScale", glm::vec2(4.0f, 3.0f));
+  cube.draw(shader.ID);
+
+  glm::mat4 step2 = glm::mat4(1.0f);
+  step2 = glm::translate(step2, center + glm::vec3(0.0f, 0.45f, 0.0f));
+  step2 = glm::scale(step2, glm::vec3(5.1f, 0.20f, 4.2f));
+  shader.setMat4("model", step2);
+  shader.setVec2("uvScale", glm::vec2(3.0f, 2.4f));
+  cube.draw(shader.ID);
+
+  glm::mat4 step3 = glm::mat4(1.0f);
+  step3 = glm::translate(step3, center + glm::vec3(0.0f, 0.63f, 0.0f));
+  step3 = glm::scale(step3, glm::vec3(3.7f, 0.16f, 3.0f));
+  shader.setMat4("model", step3);
+  shader.setVec2("uvScale", glm::vec2(2.4f, 2.0f));
+  cube.draw(shader.ID);
+
+  // Ornate coffin/chest
+  shader.setBool("useTexture", useTexture);
+  glBindTexture(GL_TEXTURE_2D, ornamentTexture);
+  shader.setVec3("objectColor", 0.96f, 0.84f, 0.62f);
+
+  glm::mat4 coffinBase = glm::mat4(1.0f);
+  coffinBase = glm::translate(coffinBase, center + glm::vec3(-0.10f, 1.00f, -0.02f));
+  coffinBase = glm::scale(coffinBase, glm::vec3(2.15f, 0.62f, 1.16f));
+  shader.setMat4("model", coffinBase);
+  shader.setVec2("uvScale", glm::vec2(2.2f, 1.2f));
+  cube.draw(shader.ID);
+
+  glm::mat4 coffinLid = glm::mat4(1.0f);
+  coffinLid = glm::translate(coffinLid, center + glm::vec3(-0.10f, 1.38f, -0.02f));
+  coffinLid = glm::scale(coffinLid, glm::vec3(2.30f, 0.12f, 1.28f));
+  shader.setMat4("model", coffinLid);
+  shader.setVec2("uvScale", glm::vec2(2.3f, 1.0f));
+  cube.draw(shader.ID);
+
+  // Recumbent anthropoid mummy body in front of the chest
+  shader.setBool("useTexture", useTexture);
+  glBindTexture(GL_TEXTURE_2D, ornamentTexture);
+  shader.setVec3("objectColor", 0.92f, 0.79f, 0.58f);
+
+  glm::mat4 mummyBase = glm::mat4(1.0f);
+  mummyBase = glm::translate(mummyBase, center + glm::vec3(1.18f, 0.76f, 0.86f));
+  mummyBase = glm::rotate(mummyBase, glm::radians(142.0f),
+                          glm::vec3(0.0f, 1.0f, 0.0f));
+  mummyBase = glm::rotate(mummyBase, glm::radians(90.0f),
+                          glm::vec3(1.0f, 0.0f, 0.0f));
+  mummyBase = glm::rotate(mummyBase, glm::radians(4.0f),
+                          glm::vec3(0.0f, 0.0f, 1.0f));
+
+  glm::mat4 mummyTorso = glm::translate(mummyBase, glm::vec3(0.0f, 0.58f, 0.0f));
+  mummyTorso = glm::scale(mummyTorso, glm::vec3(0.54f, 0.66f, 0.34f));
+  shader.setMat4("model", mummyTorso);
+  shader.setVec2("uvScale", glm::vec2(1.2f, 2.0f));
+  cube.draw(shader.ID);
+
+  glm::mat4 mummyShoulders = glm::translate(mummyBase, glm::vec3(0.0f, 0.95f, 0.0f));
+  mummyShoulders = glm::scale(mummyShoulders, glm::vec3(0.70f, 0.22f, 0.40f));
+  shader.setMat4("model", mummyShoulders);
+  shader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
+  cube.draw(shader.ID);
+
+  glm::mat4 mummyHips = glm::translate(mummyBase, glm::vec3(0.0f, 0.26f, 0.0f));
+  mummyHips = glm::scale(mummyHips, glm::vec3(0.50f, 0.30f, 0.32f));
+  shader.setMat4("model", mummyHips);
+  cube.draw(shader.ID);
+
+  glm::mat4 mummyLegsTop = glm::translate(mummyBase, glm::vec3(0.0f, -0.16f, 0.0f));
+  mummyLegsTop = glm::scale(mummyLegsTop, glm::vec3(0.40f, 0.44f, 0.28f));
+  shader.setMat4("model", mummyLegsTop);
+  cube.draw(shader.ID);
+
+  glm::mat4 mummyLegsLow = glm::translate(mummyBase, glm::vec3(0.0f, -0.52f, 0.0f));
+  mummyLegsLow = glm::scale(mummyLegsLow, glm::vec3(0.30f, 0.36f, 0.24f));
+  shader.setMat4("model", mummyLegsLow);
+  cube.draw(shader.ID);
+
+  glm::mat4 mummyFeet = glm::translate(mummyBase, glm::vec3(0.0f, -0.78f, 0.0f));
+  mummyFeet = glm::scale(mummyFeet, glm::vec3(0.24f, 0.16f, 0.20f));
+  shader.setMat4("model", mummyFeet);
+  cube.draw(shader.ID);
+
+  // Crossed arm wraps on chest.
+  glm::mat4 armA = glm::translate(mummyBase, glm::vec3(0.0f, 0.70f, 0.09f));
+  armA = glm::rotate(armA, glm::radians(28.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+  armA = glm::scale(armA, glm::vec3(0.46f, 0.08f, 0.10f));
+  shader.setMat4("model", armA);
+  cube.draw(shader.ID);
+
+  glm::mat4 armB = glm::translate(mummyBase, glm::vec3(0.0f, 0.66f, -0.09f));
+  armB = glm::rotate(armB, glm::radians(-28.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+  armB = glm::scale(armB, glm::vec3(0.46f, 0.08f, 0.10f));
+  shader.setMat4("model", armB);
+  cube.draw(shader.ID);
+
+  glm::mat4 mummyHead = glm::translate(mummyBase, glm::vec3(0.0f, 1.20f, 0.0f));
+  mummyHead = glm::scale(mummyHead, glm::vec3(0.48f, 0.24f, 0.40f));
+  shader.setMat4("model", mummyHead);
+  shader.setVec2("uvScale", glm::vec2(0.8f, 0.8f));
+  cube.draw(shader.ID);
+
+  // Gold trim strips on coffin
+  shader.setBool("useTexture", false);
+  shader.setVec3("objectColor", 0.82f, 0.62f, 0.28f);
+
+  glm::mat4 trim1 = glm::mat4(1.0f);
+  trim1 = glm::translate(trim1, center + glm::vec3(-0.10f, 1.16f, 0.57f));
+  trim1 = glm::scale(trim1, glm::vec3(1.92f, 0.05f, 0.06f));
+  shader.setMat4("model", trim1);
+  cube.draw(shader.ID);
+
+  glm::mat4 trim2 = glm::mat4(1.0f);
+  trim2 = glm::translate(trim2, center + glm::vec3(-0.10f, 1.16f, -0.57f));
+  trim2 = glm::scale(trim2, glm::vec3(1.92f, 0.05f, 0.06f));
+  shader.setMat4("model", trim2);
+  cube.draw(shader.ID);
+
+  shader.setBool("useTexture", useTexture);
+  shader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
 }
 
 void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
