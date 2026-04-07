@@ -57,6 +57,7 @@ uniform bool useNormalMap;
 // Emissive support for self-lit objects (lantern flames)
 uniform bool useEmissive;
 uniform vec3 emissiveColor;
+uniform float emissiveBrightness;
 
 uniform vec2 uvScale;
 uniform vec2 uvOffset;
@@ -79,7 +80,7 @@ void main()
     if (useEmissive) {
         if (useTexture) {
             vec3 texColor = texture(texture1, emTexCoords).rgb;
-            FragColor = vec4(texColor, 1.0);
+            FragColor = vec4(texColor * emissiveBrightness, 1.0);
         } else {
             FragColor = vec4(emissiveColor, 1.0);
         }

@@ -467,6 +467,7 @@ int main() {
 
     // ========== DRAW SCENE ==========
     mainShader.setBool("useEmissive", false);
+    mainShader.setFloat("emissiveBrightness", 1.0f);
     mainShader.setBool("useNormalMap", false);
     mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
     mainShader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
@@ -479,6 +480,8 @@ int main() {
       // Background Skydome (inverted sphere — no corner seams)
       glDepthMask(GL_FALSE);  // Don't write depth so everything draws in front
       mainShader.setBool("useEmissive", true);
+      // Dim the sky dramatically if the sun is turned off
+      mainShader.setFloat("emissiveBrightness", directionalLightOn ? 1.0f : 0.05f);
       mainShader.setBool("useTexture", true);
       glBindTexture(GL_TEXTURE_2D, skyTexture);
       glm::mat4 model = glm::mat4(1.0f);
@@ -494,6 +497,7 @@ int main() {
       
       // Revert states
       mainShader.setBool("useEmissive", false);
+      mainShader.setFloat("emissiveBrightness", 1.0f);
       mainShader.setBool("useTexture", texturesEnabled);
 
       // Sand Ground — circular island plateau above the flood water
