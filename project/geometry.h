@@ -375,4 +375,96 @@ public:
   }
 };
 
+// Flat circular disk for ground planes (normal points up)
+class Disk {
+public:
+  unsigned int VAO, VBO, EBO;
+  int indexCount;
+
+  Disk(int segments = 72) {
+    std::vector<float> vertices;
+    std::vector<unsigned int> indices;
+    float radius = 0.5f;
+    const float PI = 3.14159265359f;
+
+    // Center vertex
+    // pos(3) + normal(3) + texcoord(2) + tangent(3) = 11 floats
+    vertices.push_back(0.0f);  // x
+    vertices.push_back(0.0f);  // y
+    vertices.push_back(0.0f);  // z
+    vertices.push_back(0.0f);  // nx
+    vertices.push_back(1.0f);  // ny (up)
+    vertices.push_back(0.0f);  // nz
+    vertices.push_back(0.5f);  // u (center of UV)
+    vertices.push_back(0.5f);  // v
+    vertices.push_back(1.0f);  // tx
+    vertices.push_back(0.0f);  // ty
+    vertices.push_back(0.0f);  // tz
+
+    // Rim vertices
+    for (int i = 0; i <= segments; ++i) {
+      float theta = 2.0f * PI * (float)i / (float)segments;
+      float x = cos(theta) * radius;
+      float z = sin(theta) * radius;
+
+      vertices.push_back(x);     // pos
+      vertices.push_back(0.0f);
+      vertices.push_back(z);
+      vertices.push_back(0.0f);  // normal (up)
+      vertices.push_back(1.0f);
+      vertices.push_back(0.0f);
+      // UV mapped to unit circle for tiling
+      vertices.push_back(x + 0.5f);
+      vertices.push_back(z + 0.5f);
+      vertices.push_back(1.0f);  // tangent
+      vertices.push_back(0.0f);
+      vertices.push_back(0.0f);
+    }
+
+    // Triangle fan indices (center → rim)
+    for (int i = 0; i < segments; ++i) {
+      indices.push_back(0);           // center
+      indices.push_back(i + 1);       // current rim
+      indices.push_back(i + 2);       // next rim
+    }
+
+    indexCount = indices.size();
+
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0],
+                 GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int),
+                 &indices[0], GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float),
+                          (void *)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float),
+                          (void *)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float),
+                          (void *)(6 * sizeof(float)));
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float),
+                          (void *)(8 * sizeof(float)));
+
+    glBindVertexArray(0);
+  }
+
+  void draw(unsigned int shaderProgram) {
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+  }
+};
+
 #endif

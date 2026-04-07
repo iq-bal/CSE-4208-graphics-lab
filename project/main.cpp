@@ -212,6 +212,7 @@ int main() {
   Cube cube;
   Cylinder cylinder(36);
   Sphere skydome(48, 96);  // High-res inverted sphere for realistic sky
+  Disk sandIsland(72);     // Circular ground plane for the island
 
   // Load textures
   unsigned int wallTexture = loadTexture("resources/wall_texture.png");
@@ -434,22 +435,23 @@ int main() {
       mainShader.setBool("useEmissive", false);
       mainShader.setBool("useTexture", texturesEnabled);
 
-      // Sand Ground — elevated island plateau above the flood water
+      // Sand Ground — circular island plateau above the flood water
       glBindTexture(GL_TEXTURE_2D, sandTexture);
       model = glm::mat4(1.0f);
       model = glm::translate(model, glm::vec3(0.0f, -0.02f, 0.0f));
-      model = glm::scale(model, glm::vec3(300.0f, 0.12f, 300.0f));
+      // Disk radius is 0.5, so scale 340 gives radius 170 (covers all pyramids)
+      model = glm::scale(model, glm::vec3(340.0f, 1.0f, 340.0f));
       mainShader.setMat4("model", model);
       mainShader.setVec3("objectColor", 0.6f, 0.5f, 0.4f);
       mainShader.setVec2("uvScale", glm::vec2(30.0f, 30.0f));
-      cube.draw(mainShader.ID);
+      sandIsland.draw(mainShader.ID);
 
       // === NILE FLOOD — infinite ocean surrounding the island ===
       // Water sits just below the sand so it's visible all around the island edges.
       glBindTexture(GL_TEXTURE_2D, waterTexture);
       mainShader.setBool("useWaterSurface", true);
       // waterNearZ = inner shore radius, waterFarZ = deep ocean outer radius
-      mainShader.setFloat("waterNearZ", 155.0f);
+      mainShader.setFloat("waterNearZ", 175.0f);  // match island disk radius (170) + margin
       mainShader.setFloat("waterFarZ", 900.0f);
       mainShader.setVec3("objectColor", 1.0f, 1.0f, 1.0f);
 
