@@ -139,14 +139,19 @@ struct CamelInfo {
 };
 
 const CamelInfo camels[] = {
-  // Horizon camels only: keep wildlife in the distance.
-  {{-110.0f, 0.0f, 148.0f}, 14.0f, 0.06f, 0.0f, 2.7f},
-  {{-56.0f, 0.0f, 154.0f}, 12.0f, 0.05f, 1.8f, 2.5f},
-  {{4.0f, 0.0f, 158.0f}, 13.0f, 0.06f, 3.2f, 2.6f},
-  {{66.0f, 0.0f, 152.0f}, 11.0f, 0.05f, 4.6f, 2.4f},
-  {{118.0f, 0.0f, 156.0f}, 13.0f, 0.06f, 2.7f, 2.8f},
+  // Spread around the island perimeter (radius ~180-230 from center)
+  {{-180.0f, 0.0f,  100.0f}, 14.0f, 0.06f, 0.0f, 2.7f},   // NW
+  {{ 160.0f, 0.0f,  140.0f}, 12.0f, 0.05f, 1.8f, 2.5f},   // NE
+  {{   0.0f, 0.0f,  210.0f}, 13.0f, 0.06f, 3.2f, 2.6f},   // N
+  {{-140.0f, 0.0f, -150.0f}, 11.0f, 0.05f, 4.6f, 2.4f},   // SW
+  {{ 190.0f, 0.0f,  -80.0f}, 13.0f, 0.06f, 2.7f, 2.8f},   // E
+  {{ -40.0f, 0.0f, -200.0f}, 12.0f, 0.05f, 5.1f, 2.6f},   // S
+  {{ 120.0f, 0.0f,  190.0f}, 10.0f, 0.06f, 0.9f, 2.4f},   // NNE
+  {{-200.0f, 0.0f,  -40.0f}, 11.0f, 0.05f, 3.8f, 2.5f},   // W
+  {{ 100.0f, 0.0f, -180.0f}, 13.0f, 0.06f, 2.2f, 2.7f},   // SE
+  {{-100.0f, 0.0f,  180.0f}, 12.0f, 0.05f, 4.0f, 2.5f},   // NNW
 };
-const int NUM_CAMELS = 5;
+const int NUM_CAMELS = 10;
 
 struct DesertTreeInfo {
   glm::vec3 position;
@@ -156,14 +161,23 @@ struct DesertTreeInfo {
 };
 
 const DesertTreeInfo desertTrees[] = {
-  {{-126.0f, 0.0f, 146.0f}, 6.0f, -18.0f, 0.71f},
-  {{-88.0f, 0.0f, 154.0f}, 5.5f, 24.0f, 1.43f},
-  {{-36.0f, 0.0f, 149.0f}, 5.8f, -31.0f, 2.31f},
-  {{34.0f, 0.0f, 157.0f}, 6.2f, 12.0f, 3.02f},
-  {{86.0f, 0.0f, 151.0f}, 5.6f, -27.0f, 3.86f},
-  {{132.0f, 0.0f, 158.0f}, 6.1f, 36.0f, 4.42f},
+  // Spread around the island perimeter for scenic views from pyramid top
+  {{-200.0f, 0.0f,   60.0f}, 6.0f, -18.0f, 0.71f},   // W
+  {{ 190.0f, 0.0f,   90.0f}, 5.5f,  24.0f, 1.43f},   // E
+  {{ -60.0f, 0.0f,  210.0f}, 5.8f, -31.0f, 2.31f},   // N
+  {{  80.0f, 0.0f,  200.0f}, 6.2f,  12.0f, 3.02f},   // NE
+  {{-160.0f, 0.0f, -130.0f}, 5.6f, -27.0f, 3.86f},   // SW
+  {{ 170.0f, 0.0f, -120.0f}, 6.1f,  36.0f, 4.42f},   // SE
+  {{ -20.0f, 0.0f, -215.0f}, 5.4f,  -8.0f, 5.10f},   // S
+  {{-210.0f, 0.0f,  -30.0f}, 5.9f,  42.0f, 5.82f},   // WSW
+  {{ 210.0f, 0.0f,  -20.0f}, 5.7f, -15.0f, 6.33f},   // ESE
+  {{-130.0f, 0.0f,  175.0f}, 6.0f,  28.0f, 0.22f},   // NNW
+  {{ 140.0f, 0.0f,  160.0f}, 5.3f, -40.0f, 1.05f},   // NNE
+  {{ 50.0f, 0.0f, -210.0f},  5.8f,  18.0f, 2.77f},   // SSE
+  {{-190.0f, 0.0f,  130.0f}, 6.3f, -22.0f, 3.50f},   // WNW
+  {{ 200.0f, 0.0f,   40.0f}, 5.5f,  33.0f, 4.18f},   // ENE
 };
-const int NUM_DESERT_TREES = 6;
+const int NUM_DESERT_TREES = 14;
 
 int main() {
   // glfw: initialize and configure
@@ -439,8 +453,8 @@ int main() {
       glBindTexture(GL_TEXTURE_2D, sandTexture);
       model = glm::mat4(1.0f);
       model = glm::translate(model, glm::vec3(0.0f, -0.02f, 0.0f));
-      // Disk radius is 0.5, so scale 340 gives radius 170 (covers all pyramids)
-      model = glm::scale(model, glm::vec3(340.0f, 1.0f, 340.0f));
+      // Disk radius is 0.5, so scale 500 gives radius 250 (covers all pyramids with margin)
+      model = glm::scale(model, glm::vec3(500.0f, 1.0f, 500.0f));
       mainShader.setMat4("model", model);
       mainShader.setVec3("objectColor", 0.6f, 0.5f, 0.4f);
       mainShader.setVec2("uvScale", glm::vec2(30.0f, 30.0f));
@@ -451,7 +465,7 @@ int main() {
       glBindTexture(GL_TEXTURE_2D, waterTexture);
       mainShader.setBool("useWaterSurface", true);
       // waterNearZ = inner shore radius, waterFarZ = deep ocean outer radius
-      mainShader.setFloat("waterNearZ", 175.0f);  // match island disk radius (170) + margin
+      mainShader.setFloat("waterNearZ", 255.0f);  // match island disk radius (250) + margin
       mainShader.setFloat("waterFarZ", 900.0f);
       mainShader.setVec3("objectColor", 1.0f, 1.0f, 1.0f);
 
