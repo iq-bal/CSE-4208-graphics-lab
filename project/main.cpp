@@ -94,13 +94,12 @@ void drawCamel(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 rootModel,
                float walkPhase, unsigned int textureID, bool useTexture);
 void drawFractalDesertTree(Shader &shader, Cylinder &cyl, Cube &cube,
                            glm::vec3 position, float scale, float yawDeg,
-                           float seed);
-void drawDesertBranchRecursive(Shader &shader, Cylinder &cyl, Cube &cube,
-                               glm::mat4 baseModel, float length,
-                               float radius, int depth, int maxDepth,
-                               float seed);
-void drawDesertCanopyCluster(Shader &shader, Cube &cube, glm::mat4 model,
-                             float scale, float seed);
+                           float seed, unsigned int barkTexture,
+                           unsigned int canopyTexture, bool useTexture);
+void drawDatePalmFrond(Shader &shader, Cube &cube, glm::mat4 crownModel,
+                       float yawDeg, float tiltDeg, float length, float width,
+                       float curveDeg, float dryFactor, unsigned int canopyTexture,
+                       bool useTexture);
 float pseudoNoise01(float value);
 
 // Lantern positions: 4 per side, alternating along Z
@@ -223,6 +222,9 @@ int main() {
   unsigned int pyramidTexture = loadTexture("resources/pyramid_texture.png");
   unsigned int skyTexture = loadTexture("resources/sky_texture_hires.jpg");
   unsigned int camelTexture = loadTexture("resources/camel_texture.png");
+  unsigned int treeBarkTexture = loadTexture("resources/tree_bark_texture.jpg");
+  unsigned int treeCanopyTexture =
+      loadTexture("resources/tree_dry_canopy_texture.jpg");
 
   // Shader config
   mainShader.use();
@@ -547,7 +549,8 @@ int main() {
       for (int i = 0; i < NUM_DESERT_TREES; i++) {
         drawFractalDesertTree(mainShader, cylinder, cube, desertTrees[i].position,
                               desertTrees[i].scale, desertTrees[i].yawDeg,
-                              desertTrees[i].seed);
+                              desertTrees[i].seed, treeBarkTexture,
+                              treeCanopyTexture, texturesEnabled);
       }
 
     } else {
@@ -1220,107 +1223,162 @@ float pseudoNoise01(float value) {
   return s - floor(s);
 }
 
-void drawDesertCanopyCluster(Shader &shader, Cube &cube, glm::mat4 model,
-                             float scale, float seed) {
-  shader.setBool("useTexture", false);
+void drawDatePalmFrond(Shader &shader, Cube &cube, glm::mat4 crownModel,
+                       float yawDeg, float tiltDeg, float length, float width,
+                       float curveDeg, float dryFactor, unsigned int canopyTexture,
+                       bool useTexture) {
+  bool canopyTextured = useTexture && canopyTexture != 0;
+  shader.setBool("useTexture", canopyTextured);
+  if (canopyTextured) {
+    glBindTexture(GL_TEXTURE_2D, canopyTexture);
+    shader.setVec2("uvScale", glm::vec2(0.65f, 2.6f));
+  }
 
-  glm::vec3 leafBase(0.41f, 0.34f, 0.22f);
-  glm::vec3 leafDry(0.54f, 0.45f, 0.30f);
-  glm::vec3 leafDead(0.62f, 0.57f, 0.44f);
+  glm::vec3 frondGreen(0.34f, 0.42f, 0.22f);
+  glm::vec3 frondDry(0.58f, 0.50f, 0.33f);
+  shader.setVec3("objectColor", glm::mix(frondGreen, frondDry, dryFactor));
 
-  for (int i = 0; i < 3; i++) {
-    float n1 = pseudoNoise01(seed * 17.0f + i * 0.73f);
-    float n2 = pseudoNoise01(seed * 41.0f + i * 1.11f);
-    float n3 = pseudoNoise01(seed * 63.0f + i * 1.59f);
+  glm::mat4 frame = glm::rotate(crownModel, glm::radians(yawDeg),
+                                glm::vec3(0.0f, 1.0f, 0.0f));
+  frame = glm::rotate(frame, glm::radians(-tiltDeg), glm::vec3(1.0f, 0.0f, 0.0f));
 
-    glm::vec3 dryMix = glm::mix(leafBase, leafDry, 0.45f + n1 * 0.55f);
-    glm::vec3 tint = glm::mix(dryMix, leafDead, 0.35f + n2 * 0.45f);
-    shader.setVec3("objectColor", tint);
+  const int segments = 7;
+  for (int s = 0; s < segments; s++) {
+    float t = (float)s / (float)(segments - 1);
+    float segLen = length / (float)segments;
+    float segWidth = width * (1.0f - t * 0.72f);
+    float segBend = curveDeg * (0.25f + 0.75f * t);
+    float leafletLen = segLen * (0.62f - t * 0.20f);
+    float leafletWidth = segWidth * (0.55f - t * 0.15f);
 
-    glm::vec3 offset((n1 - 0.5f) * 0.62f, (n2 - 0.2f) * 0.35f,
-                     (n3 - 0.5f) * 0.62f);
-    glm::vec3 puffSize(0.14f + n2 * 0.12f, 0.08f + n1 * 0.06f,
-                       0.14f + n3 * 0.12f);
+    frame = glm::rotate(frame, glm::radians(segBend), glm::vec3(1.0f, 0.0f, 0.0f));
 
-    glm::mat4 leaf = glm::translate(model, offset * scale);
-    leaf = glm::rotate(leaf, glm::radians((n2 - 0.5f) * 24.0f),
-                       glm::vec3(0.0f, 1.0f, 0.0f));
-    leaf = glm::scale(leaf, puffSize * scale);
-    shader.setMat4("model", leaf);
+    // Central frond rib
+    glm::mat4 cardA = glm::translate(frame, glm::vec3(0.0f, 0.0f, segLen * 0.5f));
+    cardA = glm::scale(cardA, glm::vec3(segWidth, 0.010f, segLen));
+    shader.setMat4("model", cardA);
     cube.draw(shader.ID);
-  }
-}
 
-void drawDesertBranchRecursive(Shader &shader, Cylinder &cyl, Cube &cube,
-                               glm::mat4 baseModel, float length,
-                               float radius, int depth, int maxDepth,
-                               float seed) {
-  float jitterYaw = (pseudoNoise01(seed + depth * 2.3f) - 0.5f) * 10.0f;
-  float jitterRoll = (pseudoNoise01(seed + depth * 5.7f) - 0.5f) * 12.0f;
-  baseModel = glm::rotate(baseModel, glm::radians(jitterYaw),
-                          glm::vec3(0.0f, 1.0f, 0.0f));
-  baseModel = glm::rotate(baseModel, glm::radians(jitterRoll),
-                          glm::vec3(0.0f, 0.0f, 1.0f));
+    // Leaflets on both sides of the rib (feathered date palm shape)
+    for (int side = -1; side <= 1; side += 2) {
+      float sideSign = (float)side;
 
-  shader.setBool("useTexture", false);
-  glm::vec3 barkBase(0.56f, 0.44f, 0.30f);
-  glm::vec3 barkDark(0.38f, 0.29f, 0.20f);
-  float barkMix = glm::clamp((float)depth / (float)maxDepth, 0.0f, 1.0f);
-  shader.setVec3("objectColor", glm::mix(barkBase, barkDark, barkMix * 0.45f));
+      glm::mat4 leaflet = glm::translate(
+          frame, glm::vec3(sideSign * (segWidth * 0.42f), 0.0f, segLen * 0.5f));
+      leaflet = glm::rotate(leaflet, glm::radians(sideSign * (52.0f - t * 18.0f)),
+                            glm::vec3(0.0f, 0.0f, 1.0f));
+      leaflet = glm::rotate(leaflet, glm::radians(-6.0f + t * 10.0f),
+                            glm::vec3(1.0f, 0.0f, 0.0f));
+      leaflet = glm::scale(leaflet,
+                           glm::vec3(leafletWidth, 0.009f, leafletLen));
+      shader.setMat4("model", leaflet);
+      cube.draw(shader.ID);
 
-  glm::mat4 segment = glm::translate(baseModel, glm::vec3(0.0f, length * 0.5f, 0.0f));
-  segment = glm::scale(segment, glm::vec3(radius, length, radius));
-  shader.setMat4("model", segment);
-  cyl.draw(shader.ID);
-
-  glm::mat4 tip = glm::translate(baseModel, glm::vec3(0.0f, length, 0.0f));
-
-  if (depth >= maxDepth || radius < 0.018f) {
-    // Keep many dry branch tips bare so the trees feel older and arid.
-    float leafChance = pseudoNoise01(seed * 19.7f + depth * 0.61f);
-    if (leafChance > 0.78f) {
-      drawDesertCanopyCluster(shader, cube, tip,
-                              0.62f + 0.24f * pseudoNoise01(seed),
-                              seed + depth * 1.31f);
+      // Cross card helps preserve frond thickness from multiple view angles.
+      glm::mat4 leafletCross = glm::rotate(leaflet, glm::radians(84.0f),
+                                           glm::vec3(0.0f, 1.0f, 0.0f));
+      shader.setMat4("model", leafletCross);
+      cube.draw(shader.ID);
     }
-    return;
+
+    frame = glm::translate(frame, glm::vec3(0.0f, 0.0f, segLen));
   }
 
-  int childCount = (depth <= 1) ? 3 : 2;
-  for (int i = 0; i < childCount; i++) {
-    float childSeed = seed * 3.1f + i * 2.7f + depth * 0.91f;
-    float split = 20.0f + pseudoNoise01(childSeed) * 22.0f;
-    float around = (360.0f / childCount) * i + pseudoNoise01(childSeed + 4.0f) * 35.0f;
-
-    glm::mat4 child = glm::rotate(tip, glm::radians(around), glm::vec3(0.0f, 1.0f, 0.0f));
-    child = glm::rotate(child, glm::radians(split), glm::vec3(0.0f, 0.0f, 1.0f));
-
-    float childLength = length * (0.64f + pseudoNoise01(childSeed + 2.0f) * 0.14f);
-    float childRadius = radius * (0.62f + pseudoNoise01(childSeed + 8.0f) * 0.08f);
-
-    drawDesertBranchRecursive(shader, cyl, cube, child, childLength, childRadius,
-                              depth + 1, maxDepth, childSeed);
-  }
+  shader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
 }
 
 void drawFractalDesertTree(Shader &shader, Cylinder &cyl, Cube &cube,
                            glm::vec3 position, float scale, float yawDeg,
-                           float seed) {
+                           float seed, unsigned int barkTexture,
+                           unsigned int canopyTexture, bool useTexture) {
   glm::mat4 root = glm::mat4(1.0f);
   root = glm::translate(root, position);
   root = glm::rotate(root, glm::radians(yawDeg), glm::vec3(0.0f, 1.0f, 0.0f));
   root = glm::scale(root, glm::vec3(scale));
 
-  // Slight trunk lean makes the desert trees feel wind-sculpted.
-  float leanX = (pseudoNoise01(seed * 7.3f) - 0.5f) * 10.0f;
-  float leanZ = (pseudoNoise01(seed * 13.1f) - 0.5f) * 8.0f;
+  // Date palms are mostly straight, with subtle wind lean.
+  float leanX = (pseudoNoise01(seed * 7.3f) - 0.5f) * 4.0f;
+  float leanZ = (pseudoNoise01(seed * 13.1f) - 0.5f) * 4.0f;
   root = glm::rotate(root, glm::radians(leanX), glm::vec3(1.0f, 0.0f, 0.0f));
   root = glm::rotate(root, glm::radians(leanZ), glm::vec3(0.0f, 0.0f, 1.0f));
 
-  float trunkLength = 1.7f + pseudoNoise01(seed * 3.7f) * 0.35f;
-  float trunkRadius = 0.16f + pseudoNoise01(seed * 5.1f) * 0.03f;
-  drawDesertBranchRecursive(shader, cyl, cube, root, trunkLength, trunkRadius,
-                            0, 5, seed);
+  float trunkLength = 2.8f + pseudoNoise01(seed * 3.7f) * 0.6f;
+  float trunkRadius = 0.15f + pseudoNoise01(seed * 5.1f) * 0.03f;
+
+  bool barkTextured = useTexture && barkTexture != 0;
+  shader.setBool("useTexture", barkTextured);
+  if (barkTextured) {
+    glBindTexture(GL_TEXTURE_2D, barkTexture);
+    shader.setVec2("uvScale", glm::vec2(1.0f, trunkLength * 2.8f));
+  }
+  shader.setVec3("objectColor", 0.72f, 0.60f, 0.44f);
+
+  // Build a tapered trunk from stacked cylinder segments.
+  const int trunkSegments = 11;
+  const float trunkBaseScale = 1.50f;
+  const float trunkTopScale = 0.78f;
+  float segLen = trunkLength / (float)trunkSegments;
+  for (int s = 0; s < trunkSegments; s++) {
+    float t = (float)s / (float)(trunkSegments - 1);  // 0 at base, 1 at top
+    float segRadius = trunkRadius * glm::mix(trunkBaseScale, trunkTopScale, t);
+    float y = segLen * (0.5f + (float)s);
+
+    if (barkTextured) {
+      shader.setVec2("uvScale", glm::vec2(1.0f, 2.0f + trunkLength * (1.2f - 0.6f * t)));
+    }
+
+    glm::mat4 trunkSeg = glm::translate(root, glm::vec3(0.0f, y, 0.0f));
+    trunkSeg = glm::scale(trunkSeg, glm::vec3(segRadius, segLen, segRadius));
+    shader.setMat4("model", trunkSeg);
+    cyl.draw(shader.ID);
+  }
+
+  // Horizontal scar rings emulate old frond cuts on date palm trunks.
+  shader.setBool("useTexture", false);
+  for (int i = 0; i < 11; i++) {
+    float t = (float)i / 10.0f;
+    float y = trunkLength * (0.12f + t * 0.75f);
+    float ringRadius = trunkRadius *
+                       glm::mix(trunkBaseScale, trunkTopScale, t) * 1.06f;
+    glm::mat4 ring = glm::translate(root, glm::vec3(0.0f, y, 0.0f));
+    ring = glm::scale(ring, glm::vec3(ringRadius, 0.012f, ringRadius));
+    shader.setMat4("model", ring);
+    shader.setVec3("objectColor", 0.53f, 0.43f, 0.30f);
+    cyl.draw(shader.ID);
+  }
+
+  glm::mat4 crown = glm::translate(root, glm::vec3(0.0f, trunkLength, 0.0f));
+
+  shader.setBool("useTexture", false);
+  shader.setVec3("objectColor", 0.45f, 0.34f, 0.23f);
+  glm::mat4 crownCore =
+      glm::scale(crown, glm::vec3(trunkRadius * 1.18f, 0.16f, trunkRadius * 1.18f));
+  shader.setMat4("model", crownCore);
+  cyl.draw(shader.ID);
+
+  int frondCount = 20;
+  for (int i = 0; i < frondCount; i++) {
+    float n0 = pseudoNoise01(seed * 9.1f + i * 0.77f);
+    float n1 = pseudoNoise01(seed * 11.3f + i * 1.21f);
+    float n2 = pseudoNoise01(seed * 15.7f + i * 1.63f);
+
+    float yaw = (360.0f / (float)frondCount) * i + (n0 - 0.5f) * 24.0f;
+    float tilt = 36.0f + n1 * 20.0f;
+    float length = 1.08f + n2 * 0.56f;
+    float width = 0.14f + n0 * 0.05f;
+    float curve = 5.0f + n1 * 5.0f;
+    float dryFactor = 0.45f + n2 * 0.35f;
+
+    // A few older fronds hang lower and drier.
+    if (i % 6 == 0) {
+      tilt += 15.0f;
+      dryFactor = glm::min(1.0f, dryFactor + 0.25f);
+      length *= 0.88f;
+    }
+
+    drawDatePalmFrond(shader, cube, crown, yaw, tilt, length, width, curve,
+                      dryFactor, canopyTexture, useTexture);
+  }
 }
 
 // ============================================================
