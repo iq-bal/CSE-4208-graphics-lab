@@ -1362,30 +1362,28 @@ void processInput(GLFWwindow *window) {
   }
 
   // ========== TWEAKABLE GRAPHICS CONCEPT SHORTCUTS ==========
-  bool ctrl = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-              glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
 
   // --- Category 1: Geometry & Modeling ---
-  // Ctrl+UP / Ctrl+DOWN: Bezier wave amplitude (water surface)
-  if (ctrl && glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+  // [ / ]: Bezier wave amplitude (water surface)
+  if (glfwGetKey(window, GLFW_KEY_RIGHT_BRACKET) == GLFW_PRESS) {
     bezierAmplitude += 2.0f * deltaTime;
     if (bezierAmplitude > 5.0f) bezierAmplitude = 5.0f;
   }
-  if (ctrl && glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+  if (glfwGetKey(window, GLFW_KEY_LEFT_BRACKET) == GLFW_PRESS) {
     bezierAmplitude -= 2.0f * deltaTime;
     if (bezierAmplitude < 0.0f) bezierAmplitude = 0.0f;
   }
 
-  // Ctrl+RIGHT / Ctrl+LEFT: Fractal tree depth (frond density)
+  // , / . : Fractal tree depth (frond density)
   static bool fracUpPressed = false;
   static bool fracDownPressed = false;
-  if (ctrl && glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+  if (glfwGetKey(window, GLFW_KEY_PERIOD) == GLFW_PRESS) {
     if (!fracUpPressed) {
       fractalDepth = glm::min(fractalDepth + 1, 6);
       fracUpPressed = true;
     }
   } else { fracUpPressed = false; }
-  if (ctrl && glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+  if (glfwGetKey(window, GLFW_KEY_COMMA) == GLFW_PRESS) {
     if (!fracDownPressed) {
       fractalDepth = glm::max(fractalDepth - 1, 1);
       fracDownPressed = true;
