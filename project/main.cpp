@@ -240,8 +240,8 @@ int main() {
   mainShader.setBool("rotateUV90", false);
   mainShader.setBool("useWaterSurface", false);
   mainShader.setFloat("waterTime", 0.0f);
-  mainShader.setFloat("waterNearZ", -140.0f);
-  mainShader.setFloat("waterFarZ", -420.0f);
+  mainShader.setFloat("waterNearZ", -170.0f);
+  mainShader.setFloat("waterFarZ", -550.0f);
 
   // Render loop
   while (!glfwWindowShouldClose(window)) {
@@ -447,18 +447,19 @@ int main() {
       // Ocean body behind pyramids: single stable surface with shader-driven waves.
       glBindTexture(GL_TEXTURE_2D, waterTexture);
       mainShader.setBool("useWaterSurface", true);
-      mainShader.setFloat("waterNearZ", -145.0f);
-      mainShader.setFloat("waterFarZ", -460.0f);
+      mainShader.setFloat("waterNearZ", -140.0f);
+      mainShader.setFloat("waterFarZ", -580.0f);
       mainShader.setVec3("objectColor", 1.0f, 1.0f, 1.0f);
 
-      // Large ocean slab placed behind the pyramids.
+      // Large ocean slab placed behind the pyramids — overlaps sand edge to
+      // eliminate the grey gap.  Front edge: -340 + 420/2 = -130  (past sand at -150).
       model = glm::mat4(1.0f);
-      model = glm::translate(model, glm::vec3(0.0f, -0.02f, -300.0f));
-      model = glm::scale(model, glm::vec3(640.0f, 0.006f, 320.0f));
+      model = glm::translate(model, glm::vec3(0.0f, -0.04f, -340.0f));
+      model = glm::scale(model, glm::vec3(720.0f, 0.004f, 420.0f));
       mainShader.setMat4("model", model);
-      mainShader.setVec2("uvScale", glm::vec2(2.6f, 1.7f));
-      mainShader.setVec2("uvOffset", glm::vec2(currentFrame * 0.00045f,
-                     currentFrame * 0.00025f));
+      mainShader.setVec2("uvScale", glm::vec2(24.0f, 14.0f));
+      mainShader.setVec2("uvOffset", glm::vec2(currentFrame * 0.0012f,
+                     currentFrame * 0.0008f));
       cube.draw(mainShader.ID);
 
       mainShader.setBool("useWaterSurface", false);
@@ -1084,7 +1085,7 @@ void processInput(GLFWwindow *window) {
   if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) {
     if (!kKeyPressed) {
       inExterior = true;
-      camera.Position = glm::vec3(0.0f, CAMERA_EYE_HEIGHT, -132.0f);
+      camera.Position = glm::vec3(0.0f, CAMERA_EYE_HEIGHT, -156.0f);
       camera.Yaw = -90.0f;
       camera.Pitch = -3.0f;
       camera.updateCameraVectors();

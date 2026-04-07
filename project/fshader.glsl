@@ -96,21 +96,70 @@ void main()
     }
 
     if (useWaterSurface) {
-        // Convert world-space z to a 0..1 depth factor for ocean darkening.
+        // ---- Depth gradient ----
         float depthLerp = clamp((waterNearZ - FragPos.z) / (waterNearZ - waterFarZ), 0.0, 1.0);
+        float shoreFactor = smoothstep(waterNearZ - 60.0, waterNearZ + 8.0, FragPos.z);
 
-        vec3 shallowColor = vec3(0.11, 0.42, 0.50);
-        vec3 deepColor = vec3(0.02, 0.13, 0.22);
+        // Richer colour palette: sandy turquoise shallows → deep navy
+        vec3 shallowColor = vec3(0.08, 0.42, 0.48);
+        vec3 midColor     = vec3(0.04, 0.22, 0.34);
+        vec3 deepColor    = vec3(0.01, 0.06, 0.14);
+        vec3 depthColor   = mix(mix(shallowColor, midColor, smoothstep(0.0, 0.4, depthLerp)),
+                                deepColor, smoothstep(0.4, 1.0, depthLerp));
 
-        // Preserve texture detail while steering toward physically plausible water color.
-        vec3 textured = mix(baseColor, vec3(dot(baseColor, vec3(0.299, 0.587, 0.114))), 0.35);
-        vec3 depthColor = mix(shallowColor, deepColor, depthLerp);
-        baseColor = mix(depthColor, textured * depthColor * 1.25, 0.55);
+        // ---- Multi-octave texture waves ----
+        float t = waterTime;
+        vec2 uv1 = scaledTexCoords * 0.6  + vec2( t * 0.0018,  t * 0.0009);
+        vec2 uv2 = scaledTexCoords * 1.8  + vec2(-t * 0.0024,  t * 0.0018);
+        vec2 uv3 = scaledTexCoords * 4.5  + vec2( t * 0.0036, -t * 0.0028);
+        vec2 uv4 = scaledTexCoords * 9.0  + vec2(-t * 0.0015,  t * 0.0042);
+        vec3 tex1 = texture(texture1, uv1).rgb;
+        vec3 tex2 = texture(texture1, uv2).rgb;
+        vec3 tex3 = texture(texture1, uv3).rgb;
+        vec3 tex4 = texture(texture1, uv4).rgb;
+        vec3 textured = tex1 * 0.35 + tex2 * 0.30 + tex3 * 0.22 + tex4 * 0.13;
 
-        // Fresnel-like sky reflection toward grazing angles.
-        float fresnel = pow(1.0 - max(dot(normalize(norm), viewDir), 0.0), 3.0);
-        vec3 skyReflection = vec3(0.62, 0.72, 0.79);
-        baseColor = mix(baseColor, skyReflection, fresnel * 0.30);
+        // Blend texture detail into depth colour — stronger near shore
+        float texStrength = mix(0.55, 0.25, depthLerp);
+        baseColor = mix(depthColor, textured * depthColor * 1.6, texStrength);
+
+        // ---- Procedural wave normals for specular variation ----
+        float nx = sin(FragPos.x * 0.12 + t * 1.1) * 0.3
+                 + sin(FragPos.x * 0.28 - t * 0.7 + FragPos.z * 0.06) * 0.15
+                 + sin(FragPos.x * 0.55 + t * 1.8) * 0.08;
+        float nz = cos(FragPos.z * 0.10 + t * 0.9) * 0.3
+                 + cos(FragPos.z * 0.24 + t * 1.4 + FragPos.x * 0.05) * 0.15
+                 + cos(FragPos.z * 0.48 - t * 1.6) * 0.08;
+        norm = normalize(vec3(nx, 1.0, nz));
+
+        // ---- Shoreline sand tint ----
+        vec3 submergedSand = vec3(0.62, 0.56, 0.40);
+        vec3 shoreWater    = vec3(0.14, 0.48, 0.50);
+        vec3 shoreTint     = mix(shoreWater, submergedSand, 0.40);
+        baseColor = mix(baseColor, shoreTint, shoreFactor * 0.35);
+
+        // ---- Shore foam ----
+        float foamWave = sin(FragPos.x * 0.04 + t * 0.6) * 0.4
+                       + sin(FragPos.x * 0.15 - t * 1.1) * 0.3
+                       + sin(FragPos.z * 0.08 + t * 0.8) * 0.3;
+        float foamMask = smoothstep(0.55, 0.85, shoreFactor) * smoothstep(0.25, 0.65, foamWave);
+        vec3 foamColor = vec3(0.85, 0.90, 0.92);
+        baseColor = mix(baseColor, foamColor, foamMask * 0.55);
+
+        // ---- Subsurface scattering approximation ----
+        float sss = pow(max(dot(viewDir, vec3(0.0, -1.0, 0.0)), 0.0), 3.0) * shoreFactor;
+        baseColor += vec3(0.04, 0.15, 0.12) * sss * 0.6;
+
+        // ---- Fresnel sky reflection ----
+        float fresnel = pow(1.0 - max(dot(normalize(norm), viewDir), 0.0), 4.0);
+        vec3 skyReflection = mix(vec3(0.58, 0.66, 0.74), vec3(0.72, 0.78, 0.85), depthLerp);
+        baseColor = mix(baseColor, skyReflection, fresnel * 0.50);
+
+        // ---- Caustic shimmer on shallow areas ----
+        float caustic1 = sin(FragPos.x * 0.35 + t * 1.5) * cos(FragPos.z * 0.28 - t * 1.2);
+        float caustic2 = sin(FragPos.x * 0.22 - t * 0.9) * cos(FragPos.z * 0.40 + t * 0.7);
+        float causticPattern = max(caustic1 + caustic2, 0.0) * 0.5;
+        baseColor += vec3(0.06, 0.10, 0.09) * causticPattern * (1.0 - depthLerp) * 0.4;
     }
     
     vec3 result = vec3(0.0);
@@ -128,10 +177,24 @@ void main()
         result = baseColor * 0.1;
         
     if (useWaterSurface) {
-        // Subtle moving glint to avoid flat matte water.
-        float glint = sin(FragPos.x * 0.05 + waterTime * 2.2) *
-                      cos(FragPos.z * 0.06 - waterTime * 1.8);
-        result += vec3(0.06, 0.08, 0.09) * max(glint, 0.0);
+        // ---- Sun specular highlight ----
+        vec3 sunDir = normalize(vec3(50.0, 200.0, 40.0) - FragPos);
+        vec3 halfVec = normalize(sunDir + viewDir);
+        float sunSpec = pow(max(dot(norm, halfVec), 0.0), 128.0);
+        result += vec3(1.0, 0.92, 0.80) * sunSpec * 0.55;
+
+        // ---- Layered glints ----
+        float glint1 = sin(FragPos.x * 0.05 + waterTime * 2.2)
+                     * cos(FragPos.z * 0.06 - waterTime * 1.8);
+        float glint2 = sin(FragPos.x * 0.13 - waterTime * 1.5)
+                     * cos(FragPos.z * 0.11 + waterTime * 2.4);
+        float glintCombined = max(glint1, 0.0) * 0.6 + max(glint2, 0.0) * 0.4;
+        result += vec3(0.06, 0.09, 0.10) * glintCombined;
+
+        // ---- Horizon atmospheric fog ----
+        float horizonDist = clamp((waterNearZ - FragPos.z) / (waterNearZ - waterFarZ), 0.0, 1.0);
+        vec3 horizonHaze = vec3(0.62, 0.66, 0.72);
+        result = mix(result, horizonHaze, smoothstep(0.6, 1.0, horizonDist) * 0.45);
     }
 
     FragColor = vec4(result, 1.0);

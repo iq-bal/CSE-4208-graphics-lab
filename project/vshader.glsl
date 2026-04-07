@@ -19,11 +19,13 @@ void main()
 {
     vec3 localPos = aPos;
     if (useWaterSurface) {
-        // Low-amplitude layered waves for large distant water planes.
-        float waveA = sin((aPos.x * 0.16) + waterTime * 0.95) * 0.035;
-        float waveB = cos((aPos.z * 0.18) + waterTime * 0.72) * 0.025;
-        float waveC = sin((aPos.x + aPos.z) * 0.10 + waterTime * 0.45) * 0.018;
-        localPos.y += (waveA + waveB + waveC);
+        // Multi-octave organic waves for realistic water surface.
+        float waveA = sin(aPos.x * 0.08 + waterTime * 0.70) * 0.045;
+        float waveB = cos(aPos.z * 0.10 + waterTime * 0.55) * 0.035;
+        float waveC = sin((aPos.x + aPos.z) * 0.06 + waterTime * 0.38) * 0.025;
+        float waveD = sin(aPos.x * 0.22 - waterTime * 0.90) * cos(aPos.z * 0.18 + waterTime * 0.60) * 0.018;
+        float waveE = cos(aPos.x * 0.35 + aPos.z * 0.30 + waterTime * 1.20) * 0.010;
+        localPos.y += (waveA + waveB + waveC + waveD + waveE);
     }
 
     FragPos = vec3(model * vec4(localPos, 1.0));
