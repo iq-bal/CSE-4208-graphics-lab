@@ -2,6 +2,7 @@
 
 This document lists all keyboard shortcuts available for interactively tweaking each implemented computer graphics concept at runtime. Press the key while the application is running to see the effect in real-time.
 
+> **Platform:** macOS. Combo shortcuts use the `control` key (⌃), **not** `Cmd` (⌘).
 ---
 
 ## 🎮 General Controls (Pre-existing)
@@ -10,7 +11,7 @@ This document lists all keyboard shortcuts available for interactively tweaking 
 | :--- | :--- |
 | `W` / `A` / `S` / `D` | Move Forward / Left / Backward / Right |
 | `Mouse` | Look around (FPS camera) |
-| `Space` / `Left Shift` | Fly Up / Down (exterior only) |
+| `Space` / `⇧ Shift` | Fly Up / Down (exterior only) |
 | `E` | Interact (enter pyramid / open sarcophagus) |
 | `Esc` | Quit application |
 | `R` | Reset camera position |
@@ -22,10 +23,10 @@ This document lists all keyboard shortcuts available for interactively tweaking 
 
 | Shortcut | Concept | Action | Where to Observe |
 | :--- | :--- | :--- | :--- |
-| `Ctrl + ↑` | **Bezier Curve** | **Increase** wave amplitude | **Exterior → Ocean surface.** Press `O` to teleport outside, then `K` to jump to the shoreline. Hold `Ctrl+↑` — the ocean waves will grow dramatically taller, visibly deforming the water mesh via Cubic Bezier displacement. |
-| `Ctrl + ↓` | **Bezier Curve** | **Decrease** wave amplitude (down to flat) | **Exterior → Ocean surface.** Hold `Ctrl+↓` — the waves will flatten until the ocean becomes a perfectly still mirror. At `0.0`, all Bezier displacement is removed. |
-| `Ctrl + →` | **Fractal** | **Increase** fractal tree density (more fronds) | **Exterior → Palm trees around island.** Press `O` to go outside. Each press adds 6 more fractal fronds to every palm tree crown (max depth = 6, yielding 36 fronds). Trees become visibly fuller and denser. |
-| `Ctrl + ←` | **Fractal** | **Decrease** fractal tree density (fewer fronds) | **Exterior → Palm trees around island.** Each press removes 6 fronds from the trees (min depth = 1, yielding only 6 sparse fronds). Trees become bare skeletons. |
+| `⌃ Control + ↑` | **Bezier Curve** | **Increase** wave amplitude | **Exterior → Ocean surface.** Press `O` to teleport outside, then `K` to jump to the shoreline. Hold `⌃+↑` — the ocean waves will grow dramatically taller, visibly deforming the water mesh via Cubic Bezier displacement. |
+| `⌃ Control + ↓` | **Bezier Curve** | **Decrease** wave amplitude (down to flat) | **Exterior → Ocean surface.** Hold `⌃+↓` — the waves will flatten until the ocean becomes a perfectly still mirror. At `0.0`, all Bezier displacement is removed. |
+| `⌃ Control + →` | **Fractal** | **Increase** fractal tree density (more fronds) | **Exterior → Palm trees around island.** Press `O` to go outside. Each press adds 6 more fractal fronds to every palm tree crown (max depth = 6, yielding 36 fronds). Trees become visibly fuller and denser. |
+| `⌃ Control + ←` | **Fractal** | **Decrease** fractal tree density (fewer fronds) | **Exterior → Palm trees around island.** Each press removes 6 fronds from the trees (min depth = 1, yielding only 6 sparse fronds). Trees become bare skeletons. |
 
 ---
 
