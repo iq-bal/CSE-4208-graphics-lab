@@ -96,15 +96,32 @@ void main()
     }
 
     if (useWaterSurface) {
-        // ---- Radial depth gradient (water surrounds island from all sides) ----
-        float distFromIsland = length(FragPos.xz);  // radial distance from island center
-        float depthLerp = clamp((distFromIsland - waterNearZ) / (waterFarZ - waterNearZ), 0.0, 1.0);
-        float shoreFactor = 1.0 - smoothstep(waterNearZ - 30.0, waterNearZ + 20.0, distFromIsland);
+        // ---- Cubic Bezier depth curve (radial, water surrounds island) ----
+        // B(t) = (1-t)^3*P0 + 3*(1-t)^2*t*P1 + 3*(1-t)*t^2*P2 + t^3*P3
+        // Maps radial distance to a non-linear depth factor for natural colour.
+        float distFromIsland = length(FragPos.xz);
+        float rawDepth = clamp((distFromIsland - waterNearZ) / (waterFarZ - waterNearZ), 0.0, 1.0);
+
+        // Bezier control points shape the depth curve:
+        //   P0=0 (shore), P1=0.15 (slow start), P2=0.7 (accelerate), P3=1.0 (deep)
+        float bP0 = 0.0;  float bP1 = 0.15;  float bP2 = 0.70;  float bP3 = 1.0;
+        float bu = 1.0 - rawDepth;
+        float depthLerp = bu*bu*bu*bP0 + 3.0*bu*bu*rawDepth*bP1
+                        + 3.0*bu*rawDepth*rawDepth*bP2 + rawDepth*rawDepth*rawDepth*bP3;
+
+        // Shore factor via Bezier curve for smooth sandy transition
+        float rawShore = 1.0 - clamp((distFromIsland - (waterNearZ - 30.0)) / 50.0, 0.0, 1.0);
+        float sP0 = 1.0; float sP1 = 0.9; float sP2 = 0.2; float sP3 = 0.0;
+        float su = 1.0 - rawShore;
+        float shoreFactor = su*su*su*sP0 + 3.0*su*su*rawShore*sP1
+                          + 3.0*su*rawShore*rawShore*sP2 + rawShore*rawShore*rawShore*sP3;
+        shoreFactor = 1.0 - shoreFactor;
 
         // Richer colour palette: sandy turquoise shallows → deep navy
         vec3 shallowColor = vec3(0.08, 0.42, 0.48);
         vec3 midColor     = vec3(0.04, 0.22, 0.34);
         vec3 deepColor    = vec3(0.01, 0.06, 0.14);
+        // Bezier-driven blend: non-linear colour transition
         vec3 depthColor   = mix(mix(shallowColor, midColor, smoothstep(0.0, 0.4, depthLerp)),
                                 deepColor, smoothstep(0.4, 1.0, depthLerp));
 
