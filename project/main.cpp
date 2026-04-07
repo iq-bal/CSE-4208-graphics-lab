@@ -136,13 +136,12 @@ struct CamelInfo {
 };
 
 const CamelInfo camels[] = {
-  // Near camels (visible from starting position)
-  {{35.0f, 0.0f, 55.0f},   18.0f, 0.12f, 0.0f,    3.2f},
-  {{-40.0f, 0.0f, 70.0f},  22.0f, 0.09f, 2.1f,    2.8f},
-  {{55.0f, 0.0f, 90.0f},   15.0f, 0.15f, 4.2f,    3.0f},
-  // Far camels (background ambiance)
-  {{-70.0f, 0.0f, 110.0f}, 25.0f, 0.07f, 1.0f,    3.5f},
-  {{80.0f, 0.0f, 45.0f},   20.0f, 0.10f, 3.5f,    2.6f},
+  // Horizon camels only: keep wildlife in the distance.
+  {{-110.0f, 0.0f, 148.0f}, 14.0f, 0.06f, 0.0f, 2.7f},
+  {{-56.0f, 0.0f, 154.0f}, 12.0f, 0.05f, 1.8f, 2.5f},
+  {{4.0f, 0.0f, 158.0f}, 13.0f, 0.06f, 3.2f, 2.6f},
+  {{66.0f, 0.0f, 152.0f}, 11.0f, 0.05f, 4.6f, 2.4f},
+  {{118.0f, 0.0f, 156.0f}, 13.0f, 0.06f, 2.7f, 2.8f},
 };
 const int NUM_CAMELS = 5;
 
@@ -515,10 +514,21 @@ int main() {
       mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
 
       // === CAMELS ===
+      const glm::vec3 pyramidCenter(0.0f, 0.0f, -15.0f);
+      const float minCamelToPyramid = 70.0f;
+      const float minCamelToPlayer = 42.0f;
       for (int i = 0; i < NUM_CAMELS; i++) {
         float angle = currentFrame * camels[i].speed + camels[i].phaseOffset;
         float cx = camels[i].center.x + cos(angle) * camels[i].radius;
         float cz = camels[i].center.z + sin(angle) * camels[i].radius;
+
+        glm::vec3 camelPos(cx, 0.0f, cz);
+        if (glm::distance(camelPos, pyramidCenter) < minCamelToPyramid) {
+          continue;
+        }
+        if (glm::distance(camelPos, camera.Position) < minCamelToPlayer) {
+          continue;
+        }
 
         // Face direction of travel (tangent to circle)
         float facingAngle = angle + 3.14159f * 0.5f;
