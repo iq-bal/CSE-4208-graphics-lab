@@ -11,6 +11,7 @@
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{enumitem}
+\usepackage{amsmath}
 
 \hypersetup{
     colorlinks=true,
@@ -25,28 +26,25 @@
 % ------------------------- COVER PAGE -------------------------
 \begin{titlepage}
     \centering
-    \vspace*{1cm}
+    \vspace*{1in}
     
-    \includegraphics[width=0.3\textwidth]{screenshots/logo.png}\par\vspace{1cm}
+    \includegraphics[width=0.4\textwidth]{screenshots/logo.png}\par\vspace{1cm}
     
     {\scshape\LARGE \textbf{KHULNA UNIVERSITY OF ENGINEERING \& TECHNOLOGY} \par}
     \vspace{0.5cm}
     {\scshape\Large Department of Computer Science and Engineering\par}
     
-    \vspace{2cm}
+    \vspace{1cm}
     {\huge\bfseries Project Report\par}
     \vspace{0.5cm}
     {\Large\itshape The Crypt of Thoth: Interactive 3D Tomb Exploration\par}
     \vspace{0.5cm}
     {\large Course: Computer Graphics (CSE-4208)\par}
     
-    \vspace{2.5cm}
+    \vspace{1cm}
     \begin{minipage}[t]{0.45\textwidth}
         \begin{flushleft} \large
             \emph{Submitted By:}\\
-            \textbf{Forhad Islam Rony} \\
-            Roll: 2007065 \\
-            \vspace{0.2cm}
             \textbf{Iqbal Mahamud Moon} \\
             Roll: 2007093 \\
         \end{flushleft}
@@ -68,6 +66,7 @@
     {\large \today\par}
 \end{titlepage}
 
+\newpage
 % ------------------------- TABLE OF CONTENTS -------------------------
 \tableofcontents
 \newpage
@@ -76,218 +75,240 @@
 \section{Introduction}
 
 \subsection{Project Overview}
-``The Crypt of Thoth" is an immersive interactive 3D Ancient Egyptian Tomb exploration simulation built using the modern OpenGL rendering pipeline. The virtual environment represents an architecturally authentic ``T-shaped" burial chamber featuring an exterior desert biome, intricate descending corridors, pillared traverse halls, and a fully interactive burial chamber complete with a sliding sarcophagus mechanism. The project is meticulously programmed without rely on pre-compiled 3D modeling frameworks, utilizing hierarchical procedural geometry constructed entirely in C++ code. The visual fidelity encompasses algorithmic procedural geometry, dynamic texture blending, complex light attenuation, and immersive camera controls.
+``The Crypt of Thoth'' is an immersive interactive 3D Ancient Egyptian Tomb exploration simulation built using the modern OpenGL rendering pipeline. The virtual environment represents an architecturally authentic ``T-shaped'' burial chamber featuring an exterior desert biome, intricate descending corridors, pillared traverse halls, and a fully interactive burial chamber complete with a sliding sarcophagus mechanism. 
+
+The project is meticulously programmed without relying on pre-compiled 3D modeling frameworks, utilizing hierarchical procedural geometry constructed entirely in C++ code. The visual fidelity encompasses algorithmic procedural geometry, dynamic texture blending, complex light attenuation, and immersive tracking camera controls, simulating a historically authentic traversal experience.
 
 \subsection{Objectives}
-The primary objective of this project is to create an engaging visual experience showcasing foundational and advanced computer graphics techniques. Key goals include:
+The primary objective of this project is to create an engaging visual experience showcasing foundational and advanced computer graphics techniques natively. Key goals include:
 \begin{itemize}
     \item Implementing a real-time rendering pipeline with core OpenGL, GLAD, and GLFW.
     \item Procedural geometry computation demonstrating hierarchical matrix stacking.
     \item Dynamic rendering elements such as Bezier curve displacement and fractal generation.
-    \item Complex mathematical lighting paradigms incorporating Point, Spot, and Directional sources with accurate attenuation parameters.
-    \item Emulating realistic surface qualities leveraging multiple texture maps and Phong reflection per-fragment shading.
+    \item Complex mathematical lighting paradigms incorporating Point, Spot, and Directional sources spanning physically accurate attenuation parameters.
+    \item Emulating realistic surface qualities leveraging multiple texture maps, ambient occlusion falloffs, and Phong reflection per-fragment shading.
 \end{itemize}
 
+\newpage
 % ------------------------- SECTION 2: THEORETICAL FOUNDATION -------------------------
 \section{Theoretical Background}
 
 \subsection{Geometry \& Mathematical Modeling}
-\textbf{Bezier Curves:} A parametric curve used extensively in computer graphics. Displacing points based on control polygon constraints, cubic equations of degree 3 interpolate between start and endpoints while being stretched towards inner control points. This principle is utilized to perturb the rigid geometry of the exterior ocean surface, creating dynamic wave meshes. 
-\\
-\textbf{Fractals:} A geometric figure exhibiting self-similarity evaluated via recursive functions. In our simulation, the lush crowns of the desert palm trees are algorithmically constructed using fractal generation, dynamically spawning variable geometrical branches based on recursive depth configurations to synthesize dense, organic foliage.
+\textbf{Bezier Curves:} A parametric mathematical curve used extensively in modeling smooth geometry scaling. Displacing physical vertices based on control polygon constraints, cubic equations interpolate between bounds. This principle is utilized to perturb the rigid geometry of the exterior ocean surface mathematically, evaluating time variables natively to compose dynamic waves instead of rigid plane static meshes.
 
-\subsection{Shading & Illumination (The Phong Model)}
-The illumination simulates how light reacts physically when hitting object surfaces, calculated natively using the local \textit{Phong Reflection Model}.
-The fundamental formulation defines light via:
+\textbf{Fractals:} A geometric figure exhibiting continuous self-similarity. In our simulation, the lush crowns of the desert palm trees are algorithmically constructed using fractal generation computations. Instead of loading complex `.obj` shapes, the program dynamically spawns variable branches governed by recursive depth constraints, producing dense, biologically organic palm foliage dynamically.
+
+\subsection{Shading \& Illumination (The Phong Model)}
+The illumination algorithm specifies how theoretical photons physically react when contacting rendering bounds, computed exclusively via the \textit{Phong Reflection Model} implemented in fragment shaders.
+The equation scales linearly:
 \begin{enumerate}
-    \item \textbf{Ambient Lighting ($I_a$):} Global illumination minimum bounds ensuring objects shadowed by direct beams retain minimal visibility ($I_a = k_a L_a$).
-    \item \textbf{Diffuse Reflection ($I_d$):} The matte reflection defining how light scatters directionally depending on the incidence angle (dot product) relative to the vertex normal vectors ($I_d = k_d L_d \max(N \cdot L, 0)$).
-    \item \textbf{Specular Highlights ($I_s$):} Simulated glossiness calculated from the reflection vector matched against the camera's angle of observation, raised to a shininess exponent evaluating highlight tightness ($I_s = k_s L_s \max(R \cdot V, 0)^{\text{shininess}}$).
+    \item \textbf{Ambient Lighting ($I_a$):} Global illumination parameters simulating natural scatter. It guarantees objects entirely secluded from direct light maintain a baseline structural visibility. Computed universally as ($I_a = k_a L_a$).
+    \item \textbf{Diffuse Reflection ($I_d$):} The matte scattering of light depending heavily on the precise angle of incidence (Dot Product) of the light vector against the calculated vertex normal vector. Forms gradient shading across volumes. Computed via ($I_d = k_d L_d \max(N \cdot L, 0)$).
+    \item \textbf{Specular Highlights ($I_s$):} Simulated physical glossiness reflecting the bounce vector back to the user's view vector, exponentially bounded by a \textit{shininess} variable mapping exact light pinpoint intensity. ($I_s = k_s L_s \max(R \cdot V, 0)^{\text{shininess}}$).
 \end{enumerate}
 
-\subsection{Texturing \& Blending}
-Surface fidelity is augmented via bounding 2D imagery (texture maps) across triangle vertex attributes. The inherent interpolation processes within the rasterization pipeline algorithmically map UV coordinates. Furthermore, sophisticated \textit{Fragment Blending} interpolates output values via linear interpolations ($\text{mix}(x, y, a)$), enabling multi-texture overlay masks for realistic sand, water intersections, and volumetric sky-fog.
+\subsection{Texturing \& Blending Mechanics}
+Visual authenticity originates from projecting two-dimensional color matrix frames (texture maps) explicitly across generated primitive vertices structure. The standard rasterization process mathematically maps UV ratios. However, implementing \textit{Fragment Blending} further linearly interpolates these values (\texttt{mix(x, y, a)}), granting multiple masks per coordinate, facilitating realistic biomes combining sandy shoreline constraints meeting animated water without sharp structural clipping.
 
-\subsection{Viewing \& Projection Matrices}
-Translating the 3D local coordinate scenes onto a 2D monitor screen relies on consecutive transformation matrices:
+\subsection{Cameras \& Viewing Projections}
+Transposing the 3-dimensional simulated environment into a 2-dimensional window necessitates cumulative linear algebra matrices bindings:
 \begin{itemize}
-    \item \textbf{Model Matrix:} Maps local space to World Space (translations, rotations, scaling).
-    \item \textbf{View Matrix:} Translates the world relative to the dynamic camera lens (\texttt{glm::lookAt}).
-    \item \textbf{Projection Matrix:} Simulates perspective and distortion (\texttt{glm::perspective} for dynamic FoV representation or \texttt{glm::ortho} for Flat/Top/Isometric bounding boxes).
+    \item \textbf{Model Matrix:} Relocates local positional boundaries into standardized World matrices explicitly.
+    \item \textbf{View Matrix:} Aligns the observable geometry inversely tracking the player's dynamic coordinate array vectors. Using mathematically computed yaw and pitch parameters for spherical tracking.
+    \item \textbf{Projection Matrix:} Simulates structural distortion enabling depth perception (`glm::perspective`), natively applying depth algorithms. Reversely, disabling perspective instantiates uniform scaling spanning various bounds via (`glm::ortho`).
 \end{itemize}
 
-
+\newpage
 % ------------------------- SECTION 3: TECHNICAL IMPLEMENTATION -------------------------
-\section{Technical Implementation}
+\section{Technical Implementation Architecture}
 
-The architecture heavily relies on vertex and fragment shaders (\texttt{vshader.glsl} and \texttt{fshader.glsl}). Real-time manipulations traverse via uniform variables allowing decoupled code logic to manipulate visual states.
+The structural execution bounds inherently rely on parallel computed shader units logic (\texttt{vshader.glsl} and \texttt{fshader.glsl}). The \texttt{main.cpp} strictly oversees CPU transformations, bindings and user interaction loops.
 
-\subsection{Geometry Construction \& Matrix Stacks}
-Complex structures such as the \textit{Pendulum Traps} and \textit{Pillared Corridors} invoke Hierarchical Modeling. The blade trap is evaluated computationally:
+\subsection{Matrix Stacks \& Procedural Geometry}
+Rendering complex hierarchical assets like the animated \textit{Pendulum Blade Traps} utilizes recursive multiplication evaluating inherited parental rotation boundaries continuously:
 $$ M_{\text{world}} = M_{\text{ceiling}} \cdot M_{\text{rotation}}(t) \cdot M_{\text{arm}} \cdot M_{\text{blade}} $$
-Where $M_{\text{rotation}}$ oscillates via the sinusoidal representation $\theta(t) = \theta_{\text{max}}\sin(2\pi ft)$.
+By bounding $\theta(t) = \theta_{\text{max}}\sin(2\pi ft)$, the blade seamlessly integrates smooth oscillation physics entirely independent of the rigid ceiling bounds but tracking arm spatial displacement accurately.
 
-\subsection{Multi-Source Lighting Environment}
-The interior and exterior are populated by distinct lighting properties simultaneously evaluated by \texttt{fshader.glsl}:
+\subsection{Lighting Ecosystems}
+The interior cryptographic halls and exterior environment feature overlapping discrete source physics:
 \begin{itemize}
-    \item \textbf{Directional Light:} Evaluated indefinitely mimicking the sun tracking the Egyptian Desert.
-    \item \textbf{Point Lights:} Bound natively to the interior lantern mechanisms. Falloff distances are bound quadratically using the inverse square law parameter approximations: $I = I_0 / (K_c + K_ld + K_qd^2)$. We further appended fractional procedural Gaussian noise parameters instantiating flickering fire illusions.
-    \item \textbf{Spotlights:} Implemented as an explicit flashlight mechanics, restricting angle bounds to an arccosine cutoff ($\sim 14^\circ$ tight beams) tracking the dynamic camera vectors natively.
+    \item \textbf{Directional Light:} Evaluates parallel infinite distance bounds, producing standard sun-shadow distributions over the pyramids and desert floor natively without inverse scaling.
+    \item \textbf{Point Lights:} Specifically bound to explicit world coordinates mapping the corridor lantern positions. Evaluated quadratically applying the inverse square attenuation: $I = I_0 / (K_c + K_l d + K_q d^2)$. Implemented custom Gaussian procedural noise instantiating physically realistic fire flickering visually.
+    \item \textbf{Spotlights:} Tracks the \textit{Camera Front} uniform continuously. Implementing arithmetic cosine bound logic, calculating fragment illumination exclusively within a $\sim14^\circ$ view cone simulating an authentic handheld flashlight mechanic illuminating dark hieroglyphs dynamically.
 \end{itemize}
 
-\subsection{Interactive Component Behaviors}
-User dynamics map to immediate transformations evaluated every frame delta ($dt$). Triggering the sarcophagus interpolates a linear transformation ($T(0, y_{\text{offset}} + y_{\text{slide}}, 0)$) revealing the interior visually whilst updating interaction radii dynamically.
 
-
-% ------------------------- SECTION 4: VISUAL SHOWCASE & FEATURES -------------------------
-\section{Visual Showcase}
-The project integrates comprehensive visual aspects derived natively from execution snapshots. 
+\newpage
+% ------------------------- SECTION 4: VISUAL PROJECT SHOWCASE -------------------------
+\section{Visual Project Showcase \& Feature Analysis}
+The following section illustrates consecutive snapshots capturing runtime behavior explicitly, showcasing specific implementations natively evaluated in the graphics pipeline traversing the exterior to the deepest interior bounds smoothly.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{screenshots/1.png}
-    \caption{The external pyramid view under directional lighting.}
-    \label{fig:exterior1}
+    \includegraphics[width=0.9\textwidth]{screenshots/1.png}
+    \caption{The foundational Pyramids rendered precisely applying procedural geometric primitives under global Directional Sunlight, demonstrating standard texturing implementations mapping standard ambient bounds uniformly across the desert terrain.}
+    \label{fig:exterior_pyramids}
+\end{figure}
+
+\newpage
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{screenshots/2.png}
+    \caption{A wider exterior parameter illustrating hierarchical asset distribution consisting of an asymmetrical palm tree, procedural dunes, and the primary pyramid scaling gracefully against the global sunset gradients matching ambient bounds.}
+    \label{fig:distant_pyramids}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \begin{subfigure}{0.48\textwidth}
-        \includegraphics[width=\linewidth]{screenshots/2.png}
-        \caption{Ocean rendering utilizing Bezier Curve displacement.}
-    \end{subfigure}\hfill
-    \begin{subfigure}{0.48\textwidth}
-        \includegraphics[width=\linewidth]{screenshots/3.png}
-        \caption{Fractal-based procedurally generated palm trees.}
-    \end{subfigure}
-    \caption{Exterior dynamic environments and algorithmic geometry.}
+    \includegraphics[width=0.9\textwidth]{screenshots/3.png}
+    \caption{Displaying depth-tested object occlusion. A procedurally mapped Camel structure overlapping the distant ocean physics and scaling pyramids dynamically rendered seamlessly in the GPU rasterizer algorithm.}
+    \label{fig:camel_pyramids}
+\end{figure}
+
+\newpage
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{screenshots/4.png}
+    \caption{A distant desert topography mapped procedurally exhibiting linear texture blends mimicking soft wave patterns across shifting sands, gradually transitioning strictly to the active oceanic bodies extending to the mathematical horizon limits.}
+    \label{fig:desert_view}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \begin{subfigure}{0.48\textwidth}
-        \includegraphics[width=\linewidth]{screenshots/4.png}
-        \caption{View entering the primary Crypt structure.}
-    \end{subfigure}\hfill
-    \begin{subfigure}{0.48\textwidth}
-        \includegraphics[width=\linewidth]{screenshots/5.png}
-        \caption{Traversing the initial pillared antechambers.}
-    \end{subfigure}
-    \caption{Tomb architecture revealing hierarchical pillar constructs.}
+    \includegraphics[width=0.9\textwidth]{screenshots/5.png}
+    \caption{The implementation of parametric Bezier Curves natively evaluated within \texttt{vshader.glsl}, producing structural ocean wave displacements. The procedural fragment blending algorithms continuously mix bounds applying shallow depth colors transitioning into darker aquatic values dynamically representing volumetric absorption bounds.}
+    \label{fig:ocean_bezier}
+\end{figure}
+
+\newpage
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{screenshots/6.png}
+    \caption{An intricate close-up inspecting visually detailed Palm Tree foliage structures. The system dynamically executes recursive fractal algorithms scaling geometrical primitive meshes exponentially to naturally assemble organic branching patterns.}
+    \label{fig:fractal_tree}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{screenshots/6.png}
-    \caption{The main descending corridor illuminated physically by point light flickering lanterns.}
-    \label{fig:corridor_lights}
+    \includegraphics[width=0.9\textwidth]{screenshots/7.png}
+    \caption{The primary underground T-shaped descending corridor, illuminated exclusively by Point Lights bound mathematically simulating lanterns. Showcases clear quadratic light attenuation smoothly dimming out traversing deeply into the architecture.}
+    \label{fig:corridor_1}
+\end{figure}
+
+\newpage
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{screenshots/8.png}
+    \caption{An alternate visualization of the identical descending corridor exhibiting fully maximized global ambient shader lighting without restrictive fragment loss tracking, utilized mainly for structural debugging.}
+    \label{fig:corridor_full_ambient}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \begin{subfigure}{0.48\textwidth}
-        \includegraphics[width=\linewidth]{screenshots/7.png}
-        \caption{Point lighting exhibiting quadratic attenuation gradients.}
-    \end{subfigure}\hfill
-    \begin{subfigure}{0.48\textwidth}
-        \includegraphics[width=\linewidth]{screenshots/8.png}
-        \caption{Focusing the Spot Light (Flashlight) mechanism on glyph textures.}
-    \end{subfigure}
-    \caption{Demonstrating complex multi-illumination mechanics.}
+    \includegraphics[width=0.9\textwidth]{screenshots/9.png}
+    \caption{A demonstration of the interactive dynamic Pendulum Blade Trap descending exactly inside the user collision path, relying continuously on complex Matrix Stacking physics transferring hierarchical axis evaluations across the moving pivot frames seamlessly.}
+    \label{fig:swinging_blade}
+\end{figure}
+
+\newpage
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{screenshots/10.png}
+    \caption{Dynamic multi-viewport mechanisms updating standard projections independently. Illustrating the concurrent real-time execution of Top Orthographic scaling, Isometric tracking, Perspective FPS representation, and structural side boundaries synchronously.}
+    \label{fig:viewport}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \begin{subfigure}{0.48\textwidth}
-        \includegraphics[width=\linewidth]{screenshots/9.png}
-        \caption{The dynamic Swinging Blade Trap avoiding player collisions.}
-    \end{subfigure}\hfill
-    \begin{subfigure}{0.48\textwidth}
-        \includegraphics[width=\linewidth]{screenshots/10.png}
-        \caption{Blade geometry inheriting parent transform rotations.}
-    \end{subfigure}
-    \caption{Dynamic hazards representing matrix stack manipulations.}
+    \includegraphics[width=0.9\textwidth]{screenshots/11.png}
+    \caption{The Spotlight mechanism (Flashlight) focusing a precisely constrained illuminating cone angle over a complex hieroglyphic textured wall frame, demonstrating exact dot-product clipping bounds calculated inside the active fragment shader strictly resolving pixel visibility natively.}
+    \label{fig:hieroglyph_spotlight}
 \end{figure}
 
+\newpage
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{screenshots/11.png}
-    \caption{Close-up tracking the architectural layout spanning the interior corridors.}
-    \label{fig:arch11}
-\end{figure}
-
-
-\begin{figure}[H]
-    \centering
-    \begin{subfigure}{0.48\textwidth}
-        \includegraphics[width=\linewidth]{screenshots/12.png}
-        \caption{The Grand Burial Chamber displaying normal-mapped textual decors.}
-    \end{subfigure}\hfill
-    \begin{subfigure}{0.48\textwidth}
-        \includegraphics[width=\linewidth]{screenshots/13.png}
-        \caption{Dynamic ambient occlusion representations highlighting specular properties on metallic structures.}
-    \end{subfigure}
-    \caption{The main Tomb and visual fidelity properties.}
-\end{figure}
-
-
-\begin{figure}[H]
-    \centering
-    \begin{subfigure}{0.48\textwidth}
-        \includegraphics[width=\linewidth]{screenshots/14.png}
-        \caption{The interactive Sarcophagus mesh with specular texturing layer bound.}
-    \end{subfigure}\hfill
-    \begin{subfigure}{0.48\textwidth}
-        \includegraphics[width=\linewidth]{screenshots/15.png}
-        \caption{Orthographic and Perspective projections enabled concurrently showcasing Viewport manipulation.}
-    \end{subfigure}
-    \caption{Interactive and Camera logic showcasing execution states.}
+    \includegraphics[width=0.9\textwidth]{screenshots/12.png}
+    \caption{The primary structural passage doors lit selectively via tight spotlight configurations, casting highly defined directional boundaries whilst preserving immersive peripheral ambient shadow mapping entirely rendering the dark architectural bounds effectively.}
+    \label{fig:passage_door}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{screenshots/16.png}
-    \caption{Overall representation of the complete Tomb architecture simulating atmospheric properties.}
-    \label{fig:finalshot}
+    \includegraphics[width=0.9\textwidth]{screenshots/13.png}
+    \caption{The Grand Burial Chamber displaying standard multi-light overlaps. Symmetrical Lantern Point-lights gracefully scatter mapped specular reflections cascading across textual overlays mapping the historical hieroglyph wall elements surrounding the static sarcophagus.}
+    \label{fig:burial_chamber}
 \end{figure}
 
+\newpage
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{screenshots/14.png}
+    \caption{Selective Spot Lighting exclusively isolating the central interactive Sarcophagus mesh visually. Notice the defined strict spotlight rim cutoff scaling sharply against adjacent walls devoid of corresponding ambient bleed algorithms highlighting user tracking.}
+    \label{fig:spotlight_sarcophagus}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{screenshots/15.png}
+    \caption{The unmodified Sarcophagus asset under standard constant lighting parameters to appreciate intricate bounding box construction mapping separate textual coordinates evenly prior to complex normal shading interference processes scaling.}
+    \label{fig:even_sarcophagus}
+\end{figure}
+
+\newpage
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{screenshots/16.png}
+    \caption{Interacting with the Sarcophagus triggers continuous uniform interpolation metrics directly smoothly sliding the intricate structural lid model across orthogonal properties revealing internal modeled parameters efficiently without compromising bounds.}
+    \label{fig:open_sarcophagus}
+\end{figure}
+
+\newpage
 % ------------------------- SECTION 5: INTERACTIONS & CONTROLS -------------------------
-\section{Interaction Design \& User Controls}
-To deeply interact with the computer graphics properties demonstrated within the codebase, multiple runtime toggles alter the shader uniformity directly. 
+\section{Interaction Design \& Mechanics}
+The simulated environment bridges theory and direct user interaction smoothly traversing immediate configurations toggling matrix execution logic evaluated at runtime parameters correctly.
 
-\subsection{Base Navigation}
+\subsection{Standard Spatial Navigation}
 \begin{itemize}
-    \item \textbf{W/A/S/D:} Positional Movement.
-    \item \textbf{Mouse Drag:} Pitch and Yaw mapping updating \texttt{glm::lookAt} vectors.
-    \item \textbf{Space / Shift:} Vertical translation for debugging aerial environments.
+    \item \textbf{W/A/S/D:} Linear transformation mapping velocity vectors interpolating position points physically tracking bounding coordinates.
+    \item \textbf{Mouse Movement:} Recalculates yaw and pitch orientations computing spherical logic to dynamically supply values altering \texttt{glm::lookAt} parameters real-time.
+    \item \textbf{Space / Shift:} Manipulates independent global Y-axis velocity simulating flight solely operational outside structural limitations scaling parameters.
 \end{itemize}
 
-\subsection{Graphics Manipulations}
-Interactive mechanisms toggle rendering equations mathematically bridging algorithm inputs with tangible visual outputs:
+\subsection{Dynamic Graphics Rendering Overrides}
+The native implementation intercepts distinct input signals binding modifications directly to shader uniform mappings rendering execution adjustments efficiently:
+
 \begin{table}[H]
 \centering
 \begin{tabular}{@{}llp{8cm}@{}}
 \toprule
-\textbf{Shortcut} & \textbf{Concept} & \textbf{Functionality / Result} \\ \midrule
-\texttt{[ / ]} & Bezier Curve & Adjusts cubic wave amplitudes decreasing/increasing displacements.\\
-\texttt{, / .} & Fractals & Alters recursive depth variables iterating palm foliage elements.\\
-\texttt{T} & Texture Map & Toggles sampling binding, reverting shapes back to default raw primitives.\\
-\texttt{4, 5, 6} & Phong Types & Separately toggles Ambient, Diffuse, or Specular illumination calculations.\\
-\texttt{8 / 9} & Shininess & Alters bounding parameters tightening/widening focal highlight gradients.\\
-\texttt{1, 2, 3} & Lighting & Toggles Directional Sunlight, Interior Point Lanterns, or Handheld Spotlights.\\
-\texttt{0} & Spotlight Cone & Iterates angular beam radiuses evaluating fragment visibility arcs.\\
-\texttt{V} & Viewports & Manipulates projection matrices splitting canvas horizontally and vertically viewing Perspective, Isometric, Top and Frontal simultaneously.\\ \bottomrule
+\textbf{Shortcut} & \textbf{Concept Focus} & \textbf{Rendering Result Action} \\ \midrule
+\texttt{[ / ]} & Bezier Curve Bounds & Adjusts cubic wave offset amplitudes increasing wave distortion values.\\
+\texttt{, / .} & Fractal Algorithms & Alters recursive iterations dynamically recalculating palm tree geometries.\\
+\texttt{T} & Texture Operations & Subverts sampling bindings natively exposing primitive wire color models.\\
+\texttt{4, 5, 6} & Phong Specifications & Explicitly toggles isolated Ambient, Diffuse, or Specular illumination calculations overriding algorithms.\\
+\texttt{8 / 9} & Highlight Shininess & Exponentially alters mathematical gradients widening highlight bounds realistically.\\
+\texttt{1, 2, 3} & Source Illumination & Enables global Directional Sunlight calculations, isolated Point Lantern physics, or restrictive Handheld Spotlights.\\
+\texttt{0} & Spotlight Angles & Linearly iterates defined threshold radius parameters controlling bounds.\\
+\texttt{V} & Dynamic Viewports & Overlaps matrix manipulation splitting buffer buffers spanning Orthographic, Isometric, Top and FPS perspectives concurrently.\\ \bottomrule
 \end{tabular}
-\caption{Dynamic shader rendering alteration shortcuts.}
+\caption{Real-time shader rendering execution modification controls.}
 \end{table}
 
+\newpage
 % ------------------------- SECTION 6: CONCLUSION -------------------------
-\section{Conclusion \& Future Work}
-The \textit{Crypt of Thoth} encapsulates an effective translation of the mathematical theorems bounding modern real-time computer graphics strictly toward an interactive virtual simulation. It perfectly executes fundamental mechanics incorporating procedural geometries ranging from Bezier displacement maps to recursive branching models without leaning on third-party design models. The project succeeds in rendering highly atmospheric fidelity mimicking per-pixel illumination matrices mapped dynamically to user location context mapping.
+\section{Final Conclusion \& Future Extensibility}
+\textit{The Crypt of Thoth} efficiently translates highly theoretical graphics rendering mathematical bounds into an engaging, cohesive interactive virtual platform. Executing intricate geometric properties involving parametric surface boundaries, fractal algorithms mapping and hierarchical structural layouts natively highlights deep control over foundational rendering APIs independent from exterior simulation systems. The project achieves an immersive visual progression applying advanced Phong illumination components meticulously applying localized lighting properties effectively reacting to independent object configurations mathematically.
 
-\textbf{Future Prospects:} 
-In iterations beyond this foundational framework, there are immense possibilities to increase graphical complexities linearly. Advancements integrating shadow volume mapping algorithms would natively simulate obstruction, appending significant visual realism inside the narrow pillared corridors. Additional particle emission setups mapping physical dust vectors or lantern smoke using transform feedbacks bounds another layer of sensory enhancement to the ancient environments. 
+\textbf{Extensibility Considerations:} 
+Iterating beyond strictly bounds natively opens massive improvements implementing linear depth shadow volume mapping algorithms dynamically computing visual obstructions natively mirroring precise environment elements spanning realistic depths. Proceeding incorporating global ambient occlusion maps would structurally improve primitive rendering boundaries inside narrow tomb geometries significantly augmenting authentic structural representation effectively tracking interactive progression logically.
 
 \end{document}

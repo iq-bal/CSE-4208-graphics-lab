@@ -1,17 +1,16 @@
 \contentsline {section}{\numberline {1}Introduction}{2}{section.1}%
 \contentsline {subsection}{\numberline {1.1}Project Overview}{2}{subsection.1.1}%
 \contentsline {subsection}{\numberline {1.2}Objectives}{2}{subsection.1.2}%
-\contentsline {section}{\numberline {2}Theoretical Background}{2}{section.2}%
-\contentsline {subsection}{\numberline {2.1}Geometry \& Mathematical Modeling}{2}{subsection.2.1}%
-\contentsline {subsection}{\numberline {2.2}Shading & Illumination (The Phong Model)}{3}{subsection.2.2}%
-\contentsline {subsection}{\numberline {2.3}Texturing \& Blending}{3}{subsection.2.3}%
-\contentsline {subsection}{\numberline {2.4}Viewing \& Projection Matrices}{3}{subsection.2.4}%
-\contentsline {section}{\numberline {3}Technical Implementation}{3}{section.3}%
-\contentsline {subsection}{\numberline {3.1}Geometry Construction \& Matrix Stacks}{3}{subsection.3.1}%
-\contentsline {subsection}{\numberline {3.2}Multi-Source Lighting Environment}{4}{subsection.3.2}%
-\contentsline {subsection}{\numberline {3.3}Interactive Component Behaviors}{4}{subsection.3.3}%
-\contentsline {section}{\numberline {4}Visual Showcase}{4}{section.4}%
-\contentsline {section}{\numberline {5}Interaction Design \& User Controls}{8}{section.5}%
-\contentsline {subsection}{\numberline {5.1}Base Navigation}{8}{subsection.5.1}%
-\contentsline {subsection}{\numberline {5.2}Graphics Manipulations}{8}{subsection.5.2}%
-\contentsline {section}{\numberline {6}Conclusion \& Future Work}{9}{section.6}%
+\contentsline {section}{\numberline {2}Theoretical Background}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Geometry \& Mathematical Modeling}{3}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Shading \& Illumination (The Phong Model)}{3}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Texturing \& Blending Mechanics}{3}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Cameras \& Viewing Projections}{3}{subsection.2.4}%
+\contentsline {section}{\numberline {3}Technical Implementation Architecture}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Matrix Stacks \& Procedural Geometry}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Lighting Ecosystems}{5}{subsection.3.2}%
+\contentsline {section}{\numberline {4}Visual Project Showcase \& Feature Analysis}{6}{section.4}%
+\contentsline {section}{\numberline {5}Interaction Design \& Mechanics}{15}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Standard Spatial Navigation}{15}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Dynamic Graphics Rendering Overrides}{15}{subsection.5.2}%
+\contentsline {section}{\numberline {6}Final Conclusion \& Future Extensibility}{16}{section.6}%
