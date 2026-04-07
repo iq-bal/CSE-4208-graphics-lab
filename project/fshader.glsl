@@ -52,6 +52,10 @@ uniform vec3 emissiveColor;
 uniform vec2 uvScale;
 uniform vec2 uvOffset;
 uniform bool rotateUV90;
+uniform bool useWaterSurface;
+uniform float waterTime;
+uniform float waterNearZ;
+uniform float waterFarZ;
 
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 color);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 color);
@@ -90,6 +94,24 @@ void main()
     if (useTexture) {
         baseColor = texture(texture1, scaledTexCoords).rgb;
     }
+
+    if (useWaterSurface) {
+        // Convert world-space z to a 0..1 depth factor for ocean darkening.
+        float depthLerp = clamp((waterNearZ - FragPos.z) / (waterNearZ - waterFarZ), 0.0, 1.0);
+
+        vec3 shallowColor = vec3(0.11, 0.42, 0.50);
+        vec3 deepColor = vec3(0.02, 0.13, 0.22);
+
+        // Preserve texture detail while steering toward physically plausible water color.
+        vec3 textured = mix(baseColor, vec3(dot(baseColor, vec3(0.299, 0.587, 0.114))), 0.35);
+        vec3 depthColor = mix(shallowColor, deepColor, depthLerp);
+        baseColor = mix(depthColor, textured * depthColor * 1.25, 0.55);
+
+        // Fresnel-like sky reflection toward grazing angles.
+        float fresnel = pow(1.0 - max(dot(normalize(norm), viewDir), 0.0), 3.0);
+        vec3 skyReflection = vec3(0.62, 0.72, 0.79);
+        baseColor = mix(baseColor, skyReflection, fresnel * 0.30);
+    }
     
     vec3 result = vec3(0.0);
     
@@ -105,6 +127,13 @@ void main()
     if (numPointLights == 0 && !spotLightOn)
         result = baseColor * 0.1;
         
+    if (useWaterSurface) {
+        // Subtle moving glint to avoid flat matte water.
+        float glint = sin(FragPos.x * 0.05 + waterTime * 2.2) *
+                      cos(FragPos.z * 0.06 - waterTime * 1.8);
+        result += vec3(0.06, 0.08, 0.09) * max(glint, 0.0);
+    }
+
     FragColor = vec4(result, 1.0);
 }
 

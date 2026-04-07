@@ -71,6 +71,7 @@ std::string sideDoorInputBuffer;
 float sideDoorOpenAmount = 0.0f;
 bool sideDoorZoneMuted = false;
 bool horrorTrackStarted = false;
+bool audioEnabled = false;
 
 // Lighting
 glm::vec3 lightPos(0.0f, 2.0f, 0.0f); // Central light
@@ -202,8 +203,7 @@ int main() {
   // configure global opengl state
   glEnable(GL_DEPTH_TEST);
 
-  // Start background music
-  startBackgroundMusic("resources/arabian_nights.mp3");
+  // Audio starts muted by default. Press M to toggle music.
 
   // build and compile shaders
   Shader mainShader("vshader.glsl", "fshader.glsl");
@@ -228,6 +228,7 @@ int main() {
   unsigned int treeBarkTexture = loadTexture("resources/tree_bark_texture.jpg");
   unsigned int treeCanopyTexture =
       loadTexture("resources/tree_dry_canopy_texture.jpg");
+  unsigned int waterTexture = loadTexture("resources/water_texture_hd.jpg");
 
   // Shader config
   mainShader.use();
@@ -237,6 +238,10 @@ int main() {
   mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
   mainShader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
   mainShader.setBool("rotateUV90", false);
+  mainShader.setBool("useWaterSurface", false);
+  mainShader.setFloat("waterTime", 0.0f);
+  mainShader.setFloat("waterNearZ", -140.0f);
+  mainShader.setFloat("waterFarZ", -420.0f);
 
   // Render loop
   while (!glfwWindowShouldClose(window)) {
@@ -405,6 +410,8 @@ int main() {
     mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
     mainShader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
     mainShader.setBool("rotateUV90", false);
+    mainShader.setBool("useWaterSurface", false);
+    mainShader.setFloat("waterTime", currentFrame);
 
     if (inExterior) {
       // Background Skydome (inverted sphere — no corner seams)
@@ -436,6 +443,26 @@ int main() {
       mainShader.setVec3("objectColor", 0.6f, 0.5f, 0.4f);
       mainShader.setVec2("uvScale", glm::vec2(30.0f, 30.0f));
       cube.draw(mainShader.ID);
+
+      // Ocean body behind pyramids: single stable surface with shader-driven waves.
+      glBindTexture(GL_TEXTURE_2D, waterTexture);
+      mainShader.setBool("useWaterSurface", true);
+      mainShader.setFloat("waterNearZ", -145.0f);
+      mainShader.setFloat("waterFarZ", -460.0f);
+      mainShader.setVec3("objectColor", 1.0f, 1.0f, 1.0f);
+
+      // Large ocean slab placed behind the pyramids.
+      model = glm::mat4(1.0f);
+      model = glm::translate(model, glm::vec3(0.0f, -0.02f, -300.0f));
+      model = glm::scale(model, glm::vec3(640.0f, 0.006f, 320.0f));
+      mainShader.setMat4("model", model);
+      mainShader.setVec2("uvScale", glm::vec2(2.6f, 1.7f));
+      mainShader.setVec2("uvOffset", glm::vec2(currentFrame * 0.00045f,
+                     currentFrame * 0.00025f));
+      cube.draw(mainShader.ID);
+
+      mainShader.setBool("useWaterSurface", false);
+      mainShader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
 
       // Pyramid Geometry - draw each step as separate face panels
       glActiveTexture(GL_TEXTURE0);
@@ -921,8 +948,10 @@ void processInput(GLFWwindow *window) {
   static bool fKeyPressed = false;
   static bool lKeyPressed = false;
   static bool tKeyPressed = false;
+  static bool mKeyPressed = false;
   static bool eKeyPressed = false;
   static bool jKeyPressed = false;
+  static bool kKeyPressed = false;
 
   float doorDistance = glm::length(camera.Position - SIDE_DOOR_HINT_POS);
   sideDoorPlayerNearby = (doorDistance < SIDE_DOOR_HINT_RADIUS);
@@ -934,7 +963,8 @@ void processInput(GLFWwindow *window) {
 
   if (!sideDoorPlayerNearby && !sideDoorUnlocked && sideDoorZoneMuted &&
       !horrorTrackStarted) {
-    startBackgroundMusic("resources/arabian_nights.mp3");
+    if (audioEnabled)
+      startBackgroundMusic("resources/arabian_nights.mp3");
     sideDoorZoneMuted = false;
   }
 
@@ -1001,6 +1031,26 @@ void processInput(GLFWwindow *window) {
     tKeyPressed = false;
   }
 
+  if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS) {
+    if (!mKeyPressed) {
+      audioEnabled = !audioEnabled;
+      if (audioEnabled) {
+        if (!sideDoorZoneMuted || sideDoorUnlocked) {
+          if (horrorTrackStarted) {
+            startBackgroundMusic("resources/horror_sound.mp3");
+          } else {
+            startBackgroundMusic("resources/arabian_nights.mp3");
+          }
+        }
+      } else {
+        stopBackgroundMusic();
+      }
+      mKeyPressed = true;
+    }
+  } else {
+    mKeyPressed = false;
+  }
+
   if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
     // Reset camera position and orientation
     if (inExterior) {
@@ -1028,6 +1078,20 @@ void processInput(GLFWwindow *window) {
     }
   } else {
     jKeyPressed = false;
+  }
+
+  // Dev shortcut: jump to shoreline facing the water body.
+  if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) {
+    if (!kKeyPressed) {
+      inExterior = true;
+      camera.Position = glm::vec3(0.0f, CAMERA_EYE_HEIGHT, -132.0f);
+      camera.Yaw = -90.0f;
+      camera.Pitch = -3.0f;
+      camera.updateCameraVectors();
+      kKeyPressed = true;
+    }
+  } else {
+    kKeyPressed = false;
   }
 
   // Interaction
@@ -1170,10 +1234,10 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action,
     if (sideDoorInputBuffer == SIDE_DOOR_CODE) {
       sideDoorUnlocked = true;
       stopBackgroundMusic();
-      if (!horrorTrackStarted) {
-        startBackgroundMusic("resources/horror_sound.mp3");
+      if (!horrorTrackStarted)
         horrorTrackStarted = true;
-      }
+      if (audioEnabled)
+        startBackgroundMusic("resources/horror_sound.mp3");
       sideDoorZoneMuted = false;
       std::cout << "The seal breaks. The stone doors open." << std::endl;
     } else {

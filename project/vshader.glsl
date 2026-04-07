@@ -12,10 +12,21 @@ out mat3 TBN;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform bool useWaterSurface;
+uniform float waterTime;
 
 void main()
 {
-    FragPos = vec3(model * vec4(aPos, 1.0));
+    vec3 localPos = aPos;
+    if (useWaterSurface) {
+        // Low-amplitude layered waves for large distant water planes.
+        float waveA = sin((aPos.x * 0.16) + waterTime * 0.95) * 0.035;
+        float waveB = cos((aPos.z * 0.18) + waterTime * 0.72) * 0.025;
+        float waveC = sin((aPos.x + aPos.z) * 0.10 + waterTime * 0.45) * 0.018;
+        localPos.y += (waveA + waveB + waveC);
+    }
+
+    FragPos = vec3(model * vec4(localPos, 1.0));
     TexCoords = aTexCoords;
     
     mat3 normalMatrix = transpose(inverse(mat3(model)));
