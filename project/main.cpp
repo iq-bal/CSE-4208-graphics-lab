@@ -432,8 +432,8 @@ int main() {
     
     if (flashlightOn) {
       mainShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
-      mainShader.setVec3("spotLight.diffuse", 0.4f, 0.35f, 0.25f); // Dim warm
-      mainShader.setVec3("spotLight.specular", 0.3f, 0.3f, 0.3f);
+      mainShader.setVec3("spotLight.diffuse", 1.5f, 1.4f, 1.25f); // Strong bright beam
+      mainShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
     } else {
       mainShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
       mainShader.setVec3("spotLight.diffuse", 0.0f, 0.0f, 0.0f); 
@@ -441,8 +441,8 @@ int main() {
     }
     
     mainShader.setFloat("spotLight.constant", 1.0f);
-    mainShader.setFloat("spotLight.linear", 0.14f);
-    mainShader.setFloat("spotLight.quadratic", 0.07f);
+    mainShader.setFloat("spotLight.linear", 0.045f); // Range ~100
+    mainShader.setFloat("spotLight.quadratic", 0.0075f);
     mainShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(spotConeAngle)));
     mainShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(spotConeAngle + 4.0f)));
     mainShader.setBool("spotLightOn", flashlightOn);

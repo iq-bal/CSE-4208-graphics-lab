@@ -205,9 +205,7 @@ void main()
         if (spotLightOn)
             result += CalcSpotLight(spotLight, norm, FragPos, viewDir, baseColor);
          
-        // Ambient fallback if no lights
-        if (numPointLights == 0 && !spotLightOn)
-            result = baseColor * 0.1;
+        // Ambient fallback if no lights (REMOVED: User requested true pitch black)
             
         if (isDevOrtho) {
             result += baseColor * 0.45; // Broad global light for architectural developer views
