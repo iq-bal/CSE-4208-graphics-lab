@@ -268,7 +268,9 @@ int main() {
     processInput(window);
 
     // Logic
-    bladeTime += deltaTime;
+    if (bladeActive) {
+      bladeTime += deltaTime;
+    }
     if (sarcophagusInteract) {
       if (sarcophagusOpen && sarcophagusSlide < 2.5f)
         sarcophagusSlide += deltaTime;
@@ -736,7 +738,7 @@ int main() {
     {
       float trapZ = -15.0f; // Align with the wooden ceiling beam just before the tomb
       // Swing back and forth up to 75 degrees using sine wave
-      float swingAngle = sin(glfwGetTime() * 2.5f) * glm::radians(75.0f);
+      float swingAngle = sin(bladeTime * 2.5f) * glm::radians(75.0f);
 
       mainShader.setBool("useTexture", texturesEnabled);
       glBindTexture(GL_TEXTURE_2D, metalTexture);
@@ -1023,6 +1025,7 @@ void processInput(GLFWwindow *window) {
   static bool pKeyPressed = false;
   static bool iKeyPressed = false;
   static bool oKeyPressed = false;
+  static bool hKeyPressed = false;
 
   float doorDistance = glm::length(camera.Position - SIDE_DOOR_HINT_POS);
   sideDoorPlayerNearby = (doorDistance < SIDE_DOOR_HINT_RADIUS);
@@ -1215,6 +1218,16 @@ void processInput(GLFWwindow *window) {
     }
   } else {
     oKeyPressed = false;
+  }
+
+  // Dev shortcut: toggle swinging trap (H for Halt)
+  if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS) {
+    if (!hKeyPressed) {
+      bladeActive = !bladeActive;
+      hKeyPressed = true;
+    }
+  } else {
+    hKeyPressed = false;
   }
 
   // Interaction
