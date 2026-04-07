@@ -1341,6 +1341,21 @@ void processInput(GLFWwindow *window) {
     oKeyPressed = false;
   }
 
+  // Dev shortcut: teleport directly in front of a fractal tree
+  static bool uKeyPressed = false;
+  if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS) {
+    if (!uKeyPressed) {
+      inExterior = true;
+      camera.Position = glm::vec3(-185.0f, CAMERA_EYE_HEIGHT - 0.5f, 60.0f);
+      camera.Yaw = 180.0f; // Look West towards the tree at x=-200 
+      camera.Pitch = 15.0f; // Look slightly up at the canopy
+      camera.updateCameraVectors();
+      uKeyPressed = true;
+    }
+  } else {
+    uKeyPressed = false;
+  }
+
   // Dev shortcut: toggle swinging trap (H for Halt)
   if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS) {
     if (!hKeyPressed) {

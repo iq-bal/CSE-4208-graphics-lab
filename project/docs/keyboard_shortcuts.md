@@ -81,5 +81,6 @@ This document lists all keyboard shortcuts available for interactively tweaking 
 | `O` | Outside (pyramid entrance) |
 | `K` | Shoreline (facing ocean — best for Bezier wave demo) |
 | `P` | Pyramid peak (aerial view) |
+| `U` | Tree view (teleports you right in front of a fractal palm tree) |
 | `H` | Halt/resume swinging trap animation |
 | `L` | Toggle lantern flames ON/OFF (visual only, lights stay) |
