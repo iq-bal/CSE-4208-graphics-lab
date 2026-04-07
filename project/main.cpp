@@ -25,8 +25,11 @@
 const unsigned int SCR_WIDTH = 1000;
 const unsigned int SCR_HEIGHT = 800;
 
+// External State
+bool inExterior = true;
+
 // Camera
-Camera camera(glm::vec3(0.0f, 1.5f, -5.0f));
+Camera camera(glm::vec3(0.0f, 1.5f, 40.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -167,6 +170,8 @@ int main() {
   unsigned int lanternTexture = loadTexture("resources/lantern_texture.png");
   unsigned int graveyardTexture =
       loadTexture("resources/graveyard_texture.png");
+  unsigned int sandTexture = loadTexture("resources/sand_texture.png");
+  unsigned int pyramidTexture = loadTexture("resources/pyramid_texture.png");
 
   // Shader config
   mainShader.use();
@@ -204,7 +209,11 @@ int main() {
           glm::max(targetDoorOpen, sideDoorOpenAmount - doorSpeed * deltaTime);
     }
 
-    glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
+    if (inExterior) {
+      glClearColor(0.85f, 0.45f, 0.2f, 1.0f); // Sunset sky
+    } else {
+      glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
+    }
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     mainShader.use();
@@ -219,8 +228,19 @@ int main() {
     mainShader.setVec3("viewPos", camera.Position);
 
     // ========== LIGHTING ==========
-    // Lantern point lights with warm fire color (corridor + second room)
     int lightIndex = 0;
+    if (inExterior) {
+      std::string prefix = "pointLights[0]";
+      mainShader.setVec3(prefix + ".position", glm::vec3(0.0f, 200.0f, 40.0f)); // Sun position
+      mainShader.setVec3(prefix + ".ambient", 0.4f, 0.3f, 0.2f);
+      mainShader.setVec3(prefix + ".diffuse", 1.2f, 0.9f, 0.7f);
+      mainShader.setVec3(prefix + ".specular", 0.5f, 0.4f, 0.3f);
+      mainShader.setFloat(prefix + ".constant", 1.0f);
+      mainShader.setFloat(prefix + ".linear", 0.0001f);
+      mainShader.setFloat(prefix + ".quadratic", 0.0000001f);
+      lightIndex = 1;
+    } else {
+    // Lantern point lights with warm fire color (corridor + second room)
     for (int i = 0; i < NUM_LANTERNS; i++, lightIndex++) {
       std::string prefix = "pointLights[" + std::to_string(lightIndex) + "]";
       // Slight flicker effect
@@ -268,6 +288,7 @@ int main() {
       mainShader.setFloat(prefix + ".linear", 0.22f);
       mainShader.setFloat(prefix + ".quadratic", 0.12f);
     }
+    }
 
     mainShader.setInt("numPointLights", lightIndex);
 
@@ -298,6 +319,76 @@ int main() {
     mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
     mainShader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
     mainShader.setBool("rotateUV90", false);
+
+    if (inExterior) {
+      mainShader.setBool("useTexture", texturesEnabled);
+
+      // Sand Ground
+      glBindTexture(GL_TEXTURE_2D, sandTexture);
+      glm::mat4 model = glm::mat4(1.0f);
+      model = glm::translate(model, glm::vec3(0.0f, -0.05f, 0.0f));
+      model = glm::scale(model, glm::vec3(300.0f, 0.1f, 300.0f));
+      mainShader.setMat4("model", model);
+      mainShader.setVec3("objectColor", 0.6f, 0.5f, 0.4f);
+      mainShader.setVec2("uvScale", glm::vec2(30.0f, 30.0f));
+      cube.draw(mainShader.ID);
+
+      // Pyramid Geometry
+      glBindTexture(GL_TEXTURE_2D, pyramidTexture);
+      mainShader.setVec3("objectColor", 0.85f, 0.75f, 0.65f);
+      float baseSize = 90.0f;
+      float heightPerStep = 1.0f;
+      int numSteps = 45;
+      float stepShrink = baseSize / numSteps;
+      for (int i = 0; i < numSteps; i++) {
+        float size = baseSize - i * stepShrink;
+        float yPos = i * heightPerStep + heightPerStep * 0.5f;
+        
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, yPos, -15.0f));
+        model = glm::scale(model, glm::vec3(size, heightPerStep, size));
+        mainShader.setMat4("model", model);
+        mainShader.setVec2("uvScale", glm::vec2(size / 5.0f, heightPerStep));
+        cube.draw(mainShader.ID);
+      }
+
+      // Entrance Vestibule
+      float vestZ = 31.5f;
+      
+      // Left pillar block
+      model = glm::mat4(1.0f);
+      model = glm::translate(model, glm::vec3(-2.8f, 2.5f, vestZ));
+      model = glm::scale(model, glm::vec3(2.5f, 5.0f, 3.0f));
+      mainShader.setMat4("model", model);
+      mainShader.setVec2("uvScale", glm::vec2(1.0f, 2.0f));
+      cube.draw(mainShader.ID);
+
+      // Right pillar block
+      model = glm::mat4(1.0f);
+      model = glm::translate(model, glm::vec3(2.8f, 2.5f, vestZ));
+      model = glm::scale(model, glm::vec3(2.5f, 5.0f, 3.0f));
+      mainShader.setMat4("model", model);
+      mainShader.setVec2("uvScale", glm::vec2(1.0f, 2.0f));
+      cube.draw(mainShader.ID);
+
+      // Top block
+      model = glm::mat4(1.0f);
+      model = glm::translate(model, glm::vec3(0.0f, 5.5f, vestZ));
+      model = glm::scale(model, glm::vec3(8.1f, 1.0f, 3.0f));
+      mainShader.setMat4("model", model);
+      mainShader.setVec2("uvScale", glm::vec2(3.0f, 0.5f));
+      cube.draw(mainShader.ID);
+
+      // Dark Doorway (entrance hole)
+      mainShader.setBool("useTexture", false);
+      model = glm::mat4(1.0f);
+      model = glm::translate(model, glm::vec3(0.0f, 2.5f, vestZ - 1.25f));
+      model = glm::scale(model, glm::vec3(3.1f, 5.0f, 0.5f));
+      mainShader.setMat4("model", model);
+      mainShader.setVec3("objectColor", 0.02f, 0.02f, 0.02f);
+      cube.draw(mainShader.ID);
+
+    } else {
 
     // Draw Floor (Continuous)
     glActiveTexture(GL_TEXTURE0);
@@ -596,6 +687,8 @@ int main() {
     drawSarcophagus(mainShader, cube, sarcPos, sarcophagusSlide,
                     graveyardTexture, texturesEnabled);
 
+    }
+
     glfwSwapBuffers(window);
     glfwPollEvents();
   }
@@ -694,7 +787,11 @@ void processInput(GLFWwindow *window) {
 
   if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
     // Reset camera position and orientation
-    camera.Position = glm::vec3(0.0f, CAMERA_EYE_HEIGHT, -5.0f);
+    if (inExterior) {
+      camera.Position = glm::vec3(0.0f, CAMERA_EYE_HEIGHT, 40.0f);
+    } else {
+      camera.Position = glm::vec3(0.0f, CAMERA_EYE_HEIGHT, -5.0f);
+    }
     camera.Yaw = -90.0f;
     camera.Pitch = 0.0f;
     camera.updateCameraVectors();
@@ -703,10 +800,21 @@ void processInput(GLFWwindow *window) {
   // Interaction
   if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
     if (!eKeyPressed) {
-      float dist = glm::length(camera.Position - glm::vec3(0.0f, 0.0f, -20.0f));
-      if (dist < 5.0f) {
-        sarcophagusInteract = true;
-        sarcophagusOpen = !sarcophagusOpen; // Toggle
+      if (inExterior) {
+        float dist = glm::length(camera.Position - glm::vec3(0.0f, CAMERA_EYE_HEIGHT, 33.0f));
+        if (dist < 5.0f) {
+           inExterior = false;
+           camera.Position = glm::vec3(0.0f, 1.5f, -5.0f);
+           camera.Yaw = -90.0f;
+           camera.Pitch = 0.0f;
+           camera.updateCameraVectors();
+        }
+      } else {
+        float dist = glm::length(camera.Position - glm::vec3(0.0f, 0.0f, -20.0f));
+        if (dist < 5.0f) {
+          sarcophagusInteract = true;
+          sarcophagusOpen = !sarcophagusOpen; // Toggle
+        }
       }
       eKeyPressed = true;
     }
@@ -718,6 +826,12 @@ void processInput(GLFWwindow *window) {
 }
 
 void constrainCameraToTomb() {
+  if (inExterior) {
+    camera.Position.x = glm::clamp(camera.Position.x, -140.0f, 140.0f);
+    camera.Position.z = glm::clamp(camera.Position.z, 33.0f, 140.0f); 
+    camera.Position.y = CAMERA_EYE_HEIGHT;
+    return;
+  }
   // Keep player inside modeled spaces only:
   // - Main hall: x in [-4.6, 4.6]
   // - Side chamber: x in [CAMERA_MIN_X, 4.6], but only around chamber z span
