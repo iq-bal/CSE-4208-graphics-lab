@@ -434,30 +434,31 @@ int main() {
       mainShader.setBool("useEmissive", false);
       mainShader.setBool("useTexture", texturesEnabled);
 
-      // Sand Ground
+      // Sand Ground — elevated island plateau above the flood water
       glBindTexture(GL_TEXTURE_2D, sandTexture);
       model = glm::mat4(1.0f);
-      model = glm::translate(model, glm::vec3(0.0f, -0.05f, 0.0f));
-      model = glm::scale(model, glm::vec3(300.0f, 0.1f, 300.0f));
+      model = glm::translate(model, glm::vec3(0.0f, -0.02f, 0.0f));
+      model = glm::scale(model, glm::vec3(300.0f, 0.12f, 300.0f));
       mainShader.setMat4("model", model);
       mainShader.setVec3("objectColor", 0.6f, 0.5f, 0.4f);
       mainShader.setVec2("uvScale", glm::vec2(30.0f, 30.0f));
       cube.draw(mainShader.ID);
 
-      // Ocean body behind pyramids: single stable surface with shader-driven waves.
+      // === NILE FLOOD — infinite ocean surrounding the island ===
+      // Water sits just below the sand so it's visible all around the island edges.
       glBindTexture(GL_TEXTURE_2D, waterTexture);
       mainShader.setBool("useWaterSurface", true);
-      mainShader.setFloat("waterNearZ", -140.0f);
-      mainShader.setFloat("waterFarZ", -580.0f);
+      // waterNearZ = inner shore radius, waterFarZ = deep ocean outer radius
+      mainShader.setFloat("waterNearZ", 155.0f);
+      mainShader.setFloat("waterFarZ", 900.0f);
       mainShader.setVec3("objectColor", 1.0f, 1.0f, 1.0f);
 
-      // Large ocean slab placed behind the pyramids — overlaps sand edge to
-      // eliminate the grey gap.  Front edge: -340 + 420/2 = -130  (past sand at -150).
+      // Single massive water plane covering the entire world.
       model = glm::mat4(1.0f);
-      model = glm::translate(model, glm::vec3(0.0f, -0.04f, -340.0f));
-      model = glm::scale(model, glm::vec3(720.0f, 0.004f, 420.0f));
+      model = glm::translate(model, glm::vec3(0.0f, -0.08f, 0.0f));
+      model = glm::scale(model, glm::vec3(1800.0f, 0.004f, 1800.0f));
       mainShader.setMat4("model", model);
-      mainShader.setVec2("uvScale", glm::vec2(24.0f, 14.0f));
+      mainShader.setVec2("uvScale", glm::vec2(60.0f, 60.0f));
       mainShader.setVec2("uvOffset", glm::vec2(currentFrame * 0.0012f,
                      currentFrame * 0.0008f));
       cube.draw(mainShader.ID);
@@ -1150,8 +1151,8 @@ void processInput(GLFWwindow *window) {
 
 void constrainCameraToTomb() {
   if (inExterior) {
-    camera.Position.x = glm::clamp(camera.Position.x, -220.0f, 220.0f);
-    camera.Position.z = glm::clamp(camera.Position.z, -170.0f, 190.0f);
+    camera.Position.x = glm::clamp(camera.Position.x, -800.0f, 800.0f);
+    camera.Position.z = glm::clamp(camera.Position.z, -800.0f, 800.0f);
     // Allow vertical movement but keep above ground
     camera.Position.y = glm::max(camera.Position.y, CAMERA_EYE_HEIGHT);
     return;

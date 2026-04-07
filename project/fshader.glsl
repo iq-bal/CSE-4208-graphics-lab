@@ -96,9 +96,10 @@ void main()
     }
 
     if (useWaterSurface) {
-        // ---- Depth gradient ----
-        float depthLerp = clamp((waterNearZ - FragPos.z) / (waterNearZ - waterFarZ), 0.0, 1.0);
-        float shoreFactor = smoothstep(waterNearZ - 60.0, waterNearZ + 8.0, FragPos.z);
+        // ---- Radial depth gradient (water surrounds island from all sides) ----
+        float distFromIsland = length(FragPos.xz);  // radial distance from island center
+        float depthLerp = clamp((distFromIsland - waterNearZ) / (waterFarZ - waterNearZ), 0.0, 1.0);
+        float shoreFactor = 1.0 - smoothstep(waterNearZ - 30.0, waterNearZ + 20.0, distFromIsland);
 
         // Richer colour palette: sandy turquoise shallows → deep navy
         vec3 shallowColor = vec3(0.08, 0.42, 0.48);
@@ -132,16 +133,16 @@ void main()
                  + cos(FragPos.z * 0.48 - t * 1.6) * 0.08;
         norm = normalize(vec3(nx, 1.0, nz));
 
-        // ---- Shoreline sand tint ----
+        // ---- Shoreline sand tint (radial) ----
         vec3 submergedSand = vec3(0.62, 0.56, 0.40);
         vec3 shoreWater    = vec3(0.14, 0.48, 0.50);
         vec3 shoreTint     = mix(shoreWater, submergedSand, 0.40);
         baseColor = mix(baseColor, shoreTint, shoreFactor * 0.35);
 
-        // ---- Shore foam ----
-        float foamWave = sin(FragPos.x * 0.04 + t * 0.6) * 0.4
+        // ---- Shore foam (radial — rings around island) ----
+        float foamWave = sin(distFromIsland * 0.08 + t * 0.6) * 0.4
                        + sin(FragPos.x * 0.15 - t * 1.1) * 0.3
-                       + sin(FragPos.z * 0.08 + t * 0.8) * 0.3;
+                       + sin(FragPos.z * 0.12 + t * 0.8) * 0.3;
         float foamMask = smoothstep(0.55, 0.85, shoreFactor) * smoothstep(0.25, 0.65, foamWave);
         vec3 foamColor = vec3(0.85, 0.90, 0.92);
         baseColor = mix(baseColor, foamColor, foamMask * 0.55);
@@ -191,8 +192,8 @@ void main()
         float glintCombined = max(glint1, 0.0) * 0.6 + max(glint2, 0.0) * 0.4;
         result += vec3(0.06, 0.09, 0.10) * glintCombined;
 
-        // ---- Horizon atmospheric fog ----
-        float horizonDist = clamp((waterNearZ - FragPos.z) / (waterNearZ - waterFarZ), 0.0, 1.0);
+        // ---- Horizon atmospheric fog (radial) ----
+        float horizonDist = clamp((length(FragPos.xz) - waterNearZ) / (waterFarZ - waterNearZ), 0.0, 1.0);
         vec3 horizonHaze = vec3(0.62, 0.66, 0.72);
         result = mix(result, horizonHaze, smoothstep(0.6, 1.0, horizonDist) * 0.45);
     }
