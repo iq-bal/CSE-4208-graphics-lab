@@ -348,7 +348,8 @@ int main() {
         model = glm::translate(model, glm::vec3(0.0f, yPos, -15.0f));
         model = glm::scale(model, glm::vec3(size, heightPerStep, size));
         mainShader.setMat4("model", model);
-        mainShader.setVec2("uvScale", glm::vec2(size / 5.0f, heightPerStep));
+        float tileSize = 2.0f; // each texture tile = 2x2 world units
+        mainShader.setVec2("uvScale", glm::vec2(size / tileSize, heightPerStep / tileSize));
         cube.draw(mainShader.ID);
       }
 
