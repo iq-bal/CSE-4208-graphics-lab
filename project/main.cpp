@@ -90,6 +90,8 @@ void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
                      float slideAmount, unsigned int textureID, bool useTexture);
 void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
                  float time, unsigned int textureID, bool useTexture);
+void drawCamel(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 rootModel,
+               float walkPhase, unsigned int textureID, bool useTexture);
 
 // Lantern positions: 4 per side, alternating along Z
 struct LanternInfo {
@@ -113,6 +115,26 @@ const LanternInfo secondRoomLanterns[] = {
     {{-5.25f, 2.2f, -45.0f}, -1.0f}, {{-5.25f, 2.2f, -50.0f}, -1.0f},
 };
 const int NUM_SECOND_ROOM_LANTERNS = 4;
+
+// Camel data: each camel walks a circular path in the desert
+struct CamelInfo {
+  glm::vec3 center;     // Center of circular path
+  float radius;         // Radius of circular path
+  float speed;          // Angular speed (radians per second)
+  float phaseOffset;    // Starting angle offset
+  float scale;          // Size variation
+};
+
+const CamelInfo camels[] = {
+  // Near camels (visible from starting position)
+  {{35.0f, 0.0f, 55.0f},   18.0f, 0.12f, 0.0f,    3.2f},
+  {{-40.0f, 0.0f, 70.0f},  22.0f, 0.09f, 2.1f,    2.8f},
+  {{55.0f, 0.0f, 90.0f},   15.0f, 0.15f, 4.2f,    3.0f},
+  // Far camels (background ambiance)
+  {{-70.0f, 0.0f, 110.0f}, 25.0f, 0.07f, 1.0f,    3.5f},
+  {{80.0f, 0.0f, 45.0f},   20.0f, 0.10f, 3.5f,    2.6f},
+};
+const int NUM_CAMELS = 5;
 
 int main() {
   // glfw: initialize and configure
@@ -174,6 +196,7 @@ int main() {
   unsigned int sandTexture = loadTexture("resources/sand_texture.png");
   unsigned int pyramidTexture = loadTexture("resources/pyramid_texture.png");
   unsigned int skyTexture = loadTexture("resources/sky_texture_hires.jpg");
+  unsigned int camelTexture = loadTexture("resources/camel_texture.png");
 
   // Shader config
   mainShader.use();
@@ -459,6 +482,29 @@ int main() {
       mainShader.setVec2("uvScale", glm::vec2(1.0f, -1.0f));
       mainShader.setVec2("uvOffset", glm::vec2(0.0f, 1.0f));
       cube.draw(mainShader.ID);
+
+      // Reset UV for camels
+      mainShader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
+      mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
+
+      // === CAMELS ===
+      for (int i = 0; i < NUM_CAMELS; i++) {
+        float angle = currentFrame * camels[i].speed + camels[i].phaseOffset;
+        float cx = camels[i].center.x + cos(angle) * camels[i].radius;
+        float cz = camels[i].center.z + sin(angle) * camels[i].radius;
+
+        // Face direction of travel (tangent to circle)
+        float facingAngle = angle + 3.14159f * 0.5f;
+
+        // Walk phase based on distance traveled
+        float walkPhase = currentFrame * camels[i].speed * camels[i].radius * 1.2f + camels[i].phaseOffset;
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(cx, 0.0f, cz));
+        model = glm::rotate(model, facingAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(camels[i].scale));
+        drawCamel(mainShader, cube, cylinder, model, walkPhase, camelTexture, texturesEnabled);
+      }
 
     } else {
 
@@ -1123,6 +1169,212 @@ void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     shader.setBool("useEmissive", false);
   }
+}
+
+// ============================================================
+// CAMEL — Hierarchical procedural model with walking animation
+// ============================================================
+void drawCamel(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 rootModel,
+               float walkPhase, unsigned int textureID, bool useTexture) {
+  shader.setBool("useEmissive", false);
+  shader.setBool("useTexture", useTexture);
+  shader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
+  shader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
+  shader.setBool("rotateUV90", false);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, textureID);
+
+  // Camel color tint (warm sandy brown — multiplied with texture)
+  glm::vec3 bodyColor(0.85f, 0.72f, 0.55f);
+  glm::vec3 bellyColor(0.78f, 0.68f, 0.52f);
+  glm::vec3 legColor(0.75f, 0.62f, 0.48f);
+  glm::vec3 headColor(0.82f, 0.70f, 0.54f);
+  glm::vec3 darkColor(0.45f, 0.35f, 0.25f);  // hooves, eyes, nose
+
+  // Walking animation parameters — diagonal gait
+  float legSwing = 0.35f;  // max swing angle in radians
+  float bodyBob = 0.03f * sin(walkPhase * 2.0f);  // subtle body movement
+
+  // Leg phases: diagonal gait (FL syncs with BR, FR syncs with BL)
+  float legFL = sin(walkPhase);       // Front-Left
+  float legFR = sin(walkPhase + 3.14159f);  // Front-Right (opposite)
+  float legBL = sin(walkPhase + 3.14159f);  // Back-Left (same as FR)
+  float legBR = sin(walkPhase);       // Back-Right (same as FL)
+
+  // Body center at proper height above ground
+  float bodyHeight = 2.2f + bodyBob;
+  glm::mat4 bodyBase = glm::translate(rootModel, glm::vec3(0.0f, bodyHeight, 0.0f));
+
+  // === TORSO (main body) ===
+  glm::mat4 torso = glm::scale(bodyBase, glm::vec3(1.2f, 0.9f, 2.4f));
+  shader.setMat4("model", torso);
+  shader.setVec3("objectColor", bodyColor);
+  shader.setVec2("uvScale", glm::vec2(2.0f, 1.0f));
+  cube.draw(shader.ID);
+
+  // === BELLY (slightly wider underbody for realism) ===
+  glm::mat4 belly = glm::translate(bodyBase, glm::vec3(0.0f, -0.35f, 0.0f));
+  belly = glm::scale(belly, glm::vec3(1.0f, 0.25f, 2.0f));
+  shader.setMat4("model", belly);
+  shader.setVec3("objectColor", bellyColor);
+  shader.setVec2("uvScale", glm::vec2(1.5f, 1.0f));
+  cube.draw(shader.ID);
+
+  // === HUMP (single dromedary hump) ===
+  glm::mat4 hump = glm::translate(bodyBase, glm::vec3(0.0f, 0.65f, -0.15f));
+  hump = glm::scale(hump, glm::vec3(0.7f, 0.55f, 0.9f));
+  shader.setMat4("model", hump);
+  shader.setVec3("objectColor", bodyColor * 0.95f);
+  shader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
+  cube.draw(shader.ID);
+
+  // Hump peak (rounded top)
+  glm::mat4 humpTop = glm::translate(bodyBase, glm::vec3(0.0f, 0.88f, -0.15f));
+  humpTop = glm::scale(humpTop, glm::vec3(0.45f, 0.2f, 0.55f));
+  shader.setMat4("model", humpTop);
+  cube.draw(shader.ID);
+
+  // === NECK (angled forward, multi-segment for smooth curve) ===
+  // Lower neck
+  glm::mat4 neckBase = glm::translate(bodyBase, glm::vec3(0.0f, 0.25f, 1.1f));
+  neckBase = glm::rotate(neckBase, glm::radians(35.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+  glm::mat4 neckLower = glm::translate(neckBase, glm::vec3(0.0f, 0.45f, 0.0f));
+  neckLower = glm::scale(neckLower, glm::vec3(0.45f, 0.9f, 0.4f));
+  shader.setMat4("model", neckLower);
+  shader.setVec3("objectColor", bodyColor);
+  shader.setVec2("uvScale", glm::vec2(0.5f, 1.5f));
+  cube.draw(shader.ID);
+
+  // Upper neck (slightly thinner, more vertical)
+  glm::mat4 neckUpper = glm::translate(neckBase, glm::vec3(0.0f, 1.1f, 0.0f));
+  neckUpper = glm::rotate(neckUpper, glm::radians(-15.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+  
+  glm::mat4 neckUpperGeom = glm::scale(neckUpper, glm::vec3(0.35f, 0.7f, 0.32f));
+  shader.setMat4("model", neckUpperGeom);
+  shader.setVec3("objectColor", bodyColor * 0.98f);
+  cube.draw(shader.ID);
+
+  // === HEAD ===
+  glm::mat4 headBase = glm::translate(neckUpper, glm::vec3(0.0f, 0.42f, 0.08f));
+  headBase = glm::rotate(headBase, glm::radians(-20.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+  // Main head (elongated)
+  glm::mat4 headGeom = glm::scale(headBase, glm::vec3(0.35f, 0.32f, 0.55f));
+  shader.setMat4("model", headGeom);
+  shader.setVec3("objectColor", headColor);
+  shader.setVec2("uvScale", glm::vec2(0.5f, 0.8f));
+  cube.draw(shader.ID);
+
+  // Snout / Muzzle (protruding forward)
+  glm::mat4 snout = glm::translate(headBase, glm::vec3(0.0f, -0.08f, 0.28f));
+  snout = glm::scale(snout, glm::vec3(0.25f, 0.22f, 0.25f));
+  shader.setMat4("model", snout);
+  shader.setVec3("objectColor", headColor * 0.9f);
+  cube.draw(shader.ID);
+
+  // Nose (dark tip)
+  glm::mat4 nose = glm::translate(headBase, glm::vec3(0.0f, -0.06f, 0.42f));
+  nose = glm::scale(nose, glm::vec3(0.12f, 0.08f, 0.06f));
+  shader.setMat4("model", nose);
+  shader.setBool("useTexture", false);
+  shader.setVec3("objectColor", darkColor);
+  cube.draw(shader.ID);
+
+  // Eyes (dark, on each side)
+  for (float side = -1.0f; side <= 1.0f; side += 2.0f) {
+    glm::mat4 eye = glm::translate(headBase, glm::vec3(side * 0.16f, 0.05f, 0.18f));
+    eye = glm::scale(eye, glm::vec3(0.06f, 0.06f, 0.06f));
+    shader.setMat4("model", eye);
+    shader.setVec3("objectColor", 0.1f, 0.08f, 0.05f);
+    cube.draw(shader.ID);
+  }
+
+  // Ears (small, angled)
+  for (float side = -1.0f; side <= 1.0f; side += 2.0f) {
+    glm::mat4 ear = glm::translate(headBase, glm::vec3(side * 0.15f, 0.2f, -0.08f));
+    ear = glm::rotate(ear, glm::radians(side * 15.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ear = glm::scale(ear, glm::vec3(0.06f, 0.14f, 0.05f));
+    shader.setMat4("model", ear);
+    shader.setVec3("objectColor", headColor);
+    cube.draw(shader.ID);
+  }
+
+  // Restore texture for body
+  shader.setBool("useTexture", useTexture);
+  glBindTexture(GL_TEXTURE_2D, textureID);
+
+  // === LEGS (4 legs with upper + lower segments, animated) ===
+  float legOffsets[4][2] = {
+    { 0.4f,  0.85f},  // Front-Left (x, z from body center)
+    {-0.4f,  0.85f},  // Front-Right
+    { 0.4f, -0.85f},  // Back-Left
+    {-0.4f, -0.85f},  // Back-Right
+  };
+  float legPhases[4] = {legFL, legFR, legBL, legBR};
+
+  for (int i = 0; i < 4; i++) {
+    float swing = legPhases[i] * legSwing;
+    float kneeAngle = fabs(legPhases[i]) * 0.3f;  // Knee bends more mid-stride
+
+    // Hip joint
+    glm::mat4 hip = glm::translate(bodyBase, 
+        glm::vec3(legOffsets[i][0], -0.4f, legOffsets[i][1]));
+    hip = glm::rotate(hip, swing, glm::vec3(1.0f, 0.0f, 0.0f));
+
+    // Upper leg
+    glm::mat4 upperLeg = glm::translate(hip, glm::vec3(0.0f, -0.5f, 0.0f));
+    glm::mat4 upperLegGeom = glm::scale(upperLeg, glm::vec3(0.22f, 1.0f, 0.22f));
+    shader.setMat4("model", upperLegGeom);
+    shader.setVec3("objectColor", legColor);
+    shader.setVec2("uvScale", glm::vec2(0.3f, 1.0f));
+    cube.draw(shader.ID);
+
+    // Knee joint
+    glm::mat4 knee = glm::translate(upperLeg, glm::vec3(0.0f, -0.5f, 0.0f));
+    knee = glm::rotate(knee, kneeAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+
+    // Lower leg (slightly thinner)
+    glm::mat4 lowerLeg = glm::translate(knee, glm::vec3(0.0f, -0.45f, 0.0f));
+    glm::mat4 lowerLegGeom = glm::scale(lowerLeg, glm::vec3(0.17f, 0.9f, 0.17f));
+    shader.setMat4("model", lowerLegGeom);
+    shader.setVec3("objectColor", legColor * 0.92f);
+    cube.draw(shader.ID);
+
+    // Hoof (dark, flat)
+    shader.setBool("useTexture", false);
+    glm::mat4 hoof = glm::translate(lowerLeg, glm::vec3(0.0f, -0.48f, 0.0f));
+    hoof = glm::scale(hoof, glm::vec3(0.19f, 0.08f, 0.22f));
+    shader.setMat4("model", hoof);
+    shader.setVec3("objectColor", darkColor);
+    cube.draw(shader.ID);
+    shader.setBool("useTexture", useTexture);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+  }
+
+  // === TAIL ===
+  glm::mat4 tailBase = glm::translate(bodyBase, glm::vec3(0.0f, 0.1f, -1.2f));
+  // Slight tail sway
+  float tailSway = 0.1f * sin(walkPhase * 0.7f);
+  tailBase = glm::rotate(tailBase, glm::radians(-30.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+  tailBase = glm::rotate(tailBase, tailSway, glm::vec3(0.0f, 0.0f, 1.0f));
+
+  glm::mat4 tail = glm::translate(tailBase, glm::vec3(0.0f, -0.3f, 0.0f));
+  tail = glm::scale(tail, glm::vec3(0.08f, 0.6f, 0.07f));
+  shader.setMat4("model", tail);
+  shader.setVec3("objectColor", bodyColor * 0.85f);
+  shader.setVec2("uvScale", glm::vec2(0.2f, 1.0f));
+  cube.draw(shader.ID);
+
+  // Tail tuft (darker, slightly wider)
+  glm::mat4 tuft = glm::translate(tailBase, glm::vec3(0.0f, -0.62f, 0.0f));
+  tuft = glm::scale(tuft, glm::vec3(0.1f, 0.15f, 0.09f));
+  shader.setMat4("model", tuft);
+  shader.setVec3("objectColor", darkColor * 1.3f);
+  cube.draw(shader.ID);
+
+  // Reset shader state
+  shader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
 }
 
 unsigned int loadTexture(const char *path) {
