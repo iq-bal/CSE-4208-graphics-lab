@@ -92,6 +92,16 @@ void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
                  float time, unsigned int textureID, bool useTexture);
 void drawCamel(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 rootModel,
                float walkPhase, unsigned int textureID, bool useTexture);
+void drawFractalDesertTree(Shader &shader, Cylinder &cyl, Cube &cube,
+                           glm::vec3 position, float scale, float yawDeg,
+                           float seed);
+void drawDesertBranchRecursive(Shader &shader, Cylinder &cyl, Cube &cube,
+                               glm::mat4 baseModel, float length,
+                               float radius, int depth, int maxDepth,
+                               float seed);
+void drawDesertCanopyCluster(Shader &shader, Cube &cube, glm::mat4 model,
+                             float scale, float seed);
+float pseudoNoise01(float value);
 
 // Lantern positions: 4 per side, alternating along Z
 struct LanternInfo {
@@ -135,6 +145,23 @@ const CamelInfo camels[] = {
   {{80.0f, 0.0f, 45.0f},   20.0f, 0.10f, 3.5f,    2.6f},
 };
 const int NUM_CAMELS = 5;
+
+struct DesertTreeInfo {
+  glm::vec3 position;
+  float scale;
+  float yawDeg;
+  float seed;
+};
+
+const DesertTreeInfo desertTrees[] = {
+  {{-126.0f, 0.0f, 146.0f}, 6.0f, -18.0f, 0.71f},
+  {{-88.0f, 0.0f, 154.0f}, 5.5f, 24.0f, 1.43f},
+  {{-36.0f, 0.0f, 149.0f}, 5.8f, -31.0f, 2.31f},
+  {{34.0f, 0.0f, 157.0f}, 6.2f, 12.0f, 3.02f},
+  {{86.0f, 0.0f, 151.0f}, 5.6f, -27.0f, 3.86f},
+  {{132.0f, 0.0f, 158.0f}, 6.1f, 36.0f, 4.42f},
+};
+const int NUM_DESERT_TREES = 6;
 
 int main() {
   // glfw: initialize and configure
@@ -504,6 +531,13 @@ int main() {
         model = glm::rotate(model, facingAngle, glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::scale(model, glm::vec3(camels[i].scale));
         drawCamel(mainShader, cube, cylinder, model, walkPhase, camelTexture, texturesEnabled);
+      }
+
+      // === FRACTAL DESERT TREES ===
+      for (int i = 0; i < NUM_DESERT_TREES; i++) {
+        drawFractalDesertTree(mainShader, cylinder, cube, desertTrees[i].position,
+                              desertTrees[i].scale, desertTrees[i].yawDeg,
+                              desertTrees[i].seed);
       }
 
     } else {
@@ -1169,6 +1203,114 @@ void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     shader.setBool("useEmissive", false);
   }
+}
+
+float pseudoNoise01(float value) {
+  float s = sin(value * 91.37f + 37.11f) * 43758.5453f;
+  return s - floor(s);
+}
+
+void drawDesertCanopyCluster(Shader &shader, Cube &cube, glm::mat4 model,
+                             float scale, float seed) {
+  shader.setBool("useTexture", false);
+
+  glm::vec3 leafBase(0.41f, 0.34f, 0.22f);
+  glm::vec3 leafDry(0.54f, 0.45f, 0.30f);
+  glm::vec3 leafDead(0.62f, 0.57f, 0.44f);
+
+  for (int i = 0; i < 3; i++) {
+    float n1 = pseudoNoise01(seed * 17.0f + i * 0.73f);
+    float n2 = pseudoNoise01(seed * 41.0f + i * 1.11f);
+    float n3 = pseudoNoise01(seed * 63.0f + i * 1.59f);
+
+    glm::vec3 dryMix = glm::mix(leafBase, leafDry, 0.45f + n1 * 0.55f);
+    glm::vec3 tint = glm::mix(dryMix, leafDead, 0.35f + n2 * 0.45f);
+    shader.setVec3("objectColor", tint);
+
+    glm::vec3 offset((n1 - 0.5f) * 0.62f, (n2 - 0.2f) * 0.35f,
+                     (n3 - 0.5f) * 0.62f);
+    glm::vec3 puffSize(0.14f + n2 * 0.12f, 0.08f + n1 * 0.06f,
+                       0.14f + n3 * 0.12f);
+
+    glm::mat4 leaf = glm::translate(model, offset * scale);
+    leaf = glm::rotate(leaf, glm::radians((n2 - 0.5f) * 24.0f),
+                       glm::vec3(0.0f, 1.0f, 0.0f));
+    leaf = glm::scale(leaf, puffSize * scale);
+    shader.setMat4("model", leaf);
+    cube.draw(shader.ID);
+  }
+}
+
+void drawDesertBranchRecursive(Shader &shader, Cylinder &cyl, Cube &cube,
+                               glm::mat4 baseModel, float length,
+                               float radius, int depth, int maxDepth,
+                               float seed) {
+  float jitterYaw = (pseudoNoise01(seed + depth * 2.3f) - 0.5f) * 10.0f;
+  float jitterRoll = (pseudoNoise01(seed + depth * 5.7f) - 0.5f) * 12.0f;
+  baseModel = glm::rotate(baseModel, glm::radians(jitterYaw),
+                          glm::vec3(0.0f, 1.0f, 0.0f));
+  baseModel = glm::rotate(baseModel, glm::radians(jitterRoll),
+                          glm::vec3(0.0f, 0.0f, 1.0f));
+
+  shader.setBool("useTexture", false);
+  glm::vec3 barkBase(0.56f, 0.44f, 0.30f);
+  glm::vec3 barkDark(0.38f, 0.29f, 0.20f);
+  float barkMix = glm::clamp((float)depth / (float)maxDepth, 0.0f, 1.0f);
+  shader.setVec3("objectColor", glm::mix(barkBase, barkDark, barkMix * 0.45f));
+
+  glm::mat4 segment = glm::translate(baseModel, glm::vec3(0.0f, length * 0.5f, 0.0f));
+  segment = glm::scale(segment, glm::vec3(radius, length, radius));
+  shader.setMat4("model", segment);
+  cyl.draw(shader.ID);
+
+  glm::mat4 tip = glm::translate(baseModel, glm::vec3(0.0f, length, 0.0f));
+
+  if (depth >= maxDepth || radius < 0.018f) {
+    // Keep many dry branch tips bare so the trees feel older and arid.
+    float leafChance = pseudoNoise01(seed * 19.7f + depth * 0.61f);
+    if (leafChance > 0.78f) {
+      drawDesertCanopyCluster(shader, cube, tip,
+                              0.62f + 0.24f * pseudoNoise01(seed),
+                              seed + depth * 1.31f);
+    }
+    return;
+  }
+
+  int childCount = (depth <= 1) ? 3 : 2;
+  for (int i = 0; i < childCount; i++) {
+    float childSeed = seed * 3.1f + i * 2.7f + depth * 0.91f;
+    float split = 20.0f + pseudoNoise01(childSeed) * 22.0f;
+    float around = (360.0f / childCount) * i + pseudoNoise01(childSeed + 4.0f) * 35.0f;
+
+    glm::mat4 child = glm::rotate(tip, glm::radians(around), glm::vec3(0.0f, 1.0f, 0.0f));
+    child = glm::rotate(child, glm::radians(split), glm::vec3(0.0f, 0.0f, 1.0f));
+
+    float childLength = length * (0.64f + pseudoNoise01(childSeed + 2.0f) * 0.14f);
+    float childRadius = radius * (0.62f + pseudoNoise01(childSeed + 8.0f) * 0.08f);
+
+    drawDesertBranchRecursive(shader, cyl, cube, child, childLength, childRadius,
+                              depth + 1, maxDepth, childSeed);
+  }
+}
+
+void drawFractalDesertTree(Shader &shader, Cylinder &cyl, Cube &cube,
+                           glm::vec3 position, float scale, float yawDeg,
+                           float seed) {
+  glm::mat4 root = glm::mat4(1.0f);
+  root = glm::translate(root, position);
+  root = glm::rotate(root, glm::radians(yawDeg), glm::vec3(0.0f, 1.0f, 0.0f));
+  root = glm::scale(root, glm::vec3(scale));
+
+  // Slight trunk lean makes the desert trees feel wind-sculpted.
+  float leanX = (pseudoNoise01(seed * 7.3f) - 0.5f) * 10.0f;
+  float leanZ = (pseudoNoise01(seed * 13.1f) - 0.5f) * 8.0f;
+  root = glm::rotate(root, glm::radians(leanX), glm::vec3(1.0f, 0.0f, 0.0f));
+  root = glm::rotate(root, glm::radians(leanZ), glm::vec3(0.0f, 0.0f, 1.0f));
+
+  float trunkLength = 1.7f + pseudoNoise01(seed * 3.7f) * 0.35f;
+  float trunkRadius = 0.16f + pseudoNoise01(seed * 5.1f) * 0.03f;
+  drawDesertBranchRecursive(shader, cyl, cube, root, trunkLength, trunkRadius,
+                            0, 5, seed);
 }
 
 // ============================================================
