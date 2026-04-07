@@ -1042,19 +1042,52 @@ void constrainCameraToTomb() {
     camera.Position.y = CAMERA_EYE_HEIGHT;
     return;
   }
-  // Keep player inside modeled spaces only:
-  // - Main hall: x in [-4.6, 4.6]
-  // - Side chamber: x in [CAMERA_MIN_X, 4.6], but only around chamber z span
-  float minX;
-  if (!sideDoorUnlocked) {
-    // Allow stepping up to the locked door, but not into side chamber.
-    minX = -5.2f;
-  } else {
-    bool inSideChamberZ = (camera.Position.z >= -52.8f && camera.Position.z <= -42.2f);
-    minX = inSideChamberZ ? CAMERA_MIN_X : -4.6f;
+
+  // Zone-based collision for interior spaces so walls remain solid:
+  // 1) Main hall
+  // 2) Doorway throat
+  // 3) Second chamber
+  const float hallMinX = -4.6f;
+  const float hallMaxX = CAMERA_MAX_X;
+  const float hallMinZ = CAMERA_MIN_Z;
+  const float hallMaxZ = CAMERA_MAX_Z;
+
+  const float chamberMinX = CAMERA_MIN_X;
+  const float chamberMaxX = -5.4f; // Keep player inside chamber side of shared wall.
+  const float chamberMinZ = -52.0f;
+  const float chamberMaxZ = -42.8f;
+
+  const float doorwayMinZ = -48.6f;
+  const float doorwayMaxZ = -46.4f;
+
+  float x = camera.Position.x;
+  float z = camera.Position.z;
+
+  // Door not open yet: keep player in main hall only.
+  if (!sideDoorUnlocked || sideDoorOpenAmount < 0.45f) {
+    camera.Position.x = glm::clamp(x, hallMinX, hallMaxX);
+    camera.Position.z = glm::clamp(z, hallMinZ, hallMaxZ);
+    camera.Position.y = CAMERA_EYE_HEIGHT;
+    return;
   }
-  camera.Position.x = glm::clamp(camera.Position.x, minX, CAMERA_MAX_X);
-  camera.Position.z = glm::clamp(camera.Position.z, CAMERA_MIN_Z, CAMERA_MAX_Z);
+
+  bool inDoorwayZ = (z >= doorwayMinZ && z <= doorwayMaxZ);
+  bool chamberSide = (x <= -5.0f);
+
+  if (inDoorwayZ) {
+    // Through the opening, player can move between hall and chamber.
+    x = glm::clamp(x, chamberMinX, hallMaxX);
+    z = glm::clamp(z, hallMinZ, hallMaxZ);
+  } else if (chamberSide) {
+    x = glm::clamp(x, chamberMinX, chamberMaxX);
+    z = glm::clamp(z, chamberMinZ, chamberMaxZ);
+  } else {
+    x = glm::clamp(x, hallMinX, hallMaxX);
+    z = glm::clamp(z, hallMinZ, hallMaxZ);
+  }
+
+  camera.Position.x = x;
+  camera.Position.z = z;
   camera.Position.y = CAMERA_EYE_HEIGHT;
 }
 
