@@ -380,13 +380,15 @@ int main() {
       mainShader.setVec2("uvScale", glm::vec2(3.0f, 0.5f));
       cube.draw(mainShader.ID);
 
-      // Dark Doorway (entrance hole)
-      mainShader.setBool("useTexture", false);
+      // Doorway with door texture
+      mainShader.setBool("useTexture", texturesEnabled);
+      glBindTexture(GL_TEXTURE_2D, doorTexture);
       model = glm::mat4(1.0f);
       model = glm::translate(model, glm::vec3(0.0f, 2.5f, vestZ - 1.25f));
       model = glm::scale(model, glm::vec3(3.1f, 5.0f, 0.5f));
       mainShader.setMat4("model", model);
-      mainShader.setVec3("objectColor", 0.02f, 0.02f, 0.02f);
+      mainShader.setVec3("objectColor", 0.7f, 0.6f, 0.5f);
+      mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
       cube.draw(mainShader.ID);
 
     } else {
