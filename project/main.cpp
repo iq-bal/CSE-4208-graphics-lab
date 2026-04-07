@@ -244,6 +244,7 @@ int main() {
   unsigned int treeCanopyTexture =
       loadTexture("resources/tree_dry_canopy_texture.jpg");
   unsigned int waterTexture = loadTexture("resources/water_texture_hd.jpg");
+  unsigned int metalTexture = loadTexture("resources/rusted_metal_texture.png");
 
   // Shader config
   mainShader.use();
@@ -728,6 +729,55 @@ int main() {
       mainShader.setMat4("model", model);
       mainShader.setVec3("objectColor", 0.45f, 0.35f, 0.25f);
       mainShader.setVec2("uvScale", glm::vec2(2.0f, 2.0f));
+      cube.draw(mainShader.ID);
+    }
+
+    // === SWINGING TRAP ===
+    {
+      float trapZ = -15.0f; // Align with the wooden ceiling beam just before the tomb
+      // Swing back and forth up to 75 degrees using sine wave
+      float swingAngle = sin(glfwGetTime() * 2.5f) * glm::radians(75.0f);
+
+      mainShader.setBool("useTexture", texturesEnabled);
+      glBindTexture(GL_TEXTURE_2D, metalTexture);
+      mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
+      mainShader.setVec3("objectColor", 0.5f, 0.5f, 0.5f); // Neutral tint for texture
+
+      // 1. Ceiling Mount / Pivot Engine
+      glm::mat4 mountModel = glm::mat4(1.0f);
+      mountModel = glm::translate(mountModel, glm::vec3(0.0f, 3.85f, trapZ));
+      mountModel = glm::scale(mountModel, glm::vec3(1.2f, 0.4f, 0.6f));
+      mainShader.setMat4("model", mountModel);
+      cube.draw(mainShader.ID);
+
+      // 2. The Swinging Arm and Blade
+      glm::mat4 pivot = glm::mat4(1.0f);
+      pivot = glm::translate(pivot, glm::vec3(0.0f, 3.8f, trapZ));
+      // Swing along X axis (across corridor) by rotating around Z axis
+      pivot = glm::rotate(pivot, swingAngle, glm::vec3(0.0f, 0.0f, 1.0f));
+
+      // Arm (Pole)
+      glm::mat4 armModel = glm::translate(pivot, glm::vec3(0.0f, -1.8f, 0.0f));
+      armModel = glm::scale(armModel, glm::vec3(0.15f, 3.6f, 0.15f));
+      mainShader.setMat4("model", armModel);
+      mainShader.setVec2("uvScale", glm::vec2(1.0f, 5.0f));
+      cube.draw(mainShader.ID);
+
+      // Main Blade (Giant Diamond Shape)
+      glm::mat4 bladeModel = glm::translate(pivot, glm::vec3(0.0f, -3.6f, 0.0f));
+      // Squash it vertically slightly to make it an imposing wedge axe
+      bladeModel = glm::scale(bladeModel, glm::vec3(1.5f, 1.0f, 1.0f));
+      bladeModel = glm::rotate(bladeModel, glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+      bladeModel = glm::scale(bladeModel, glm::vec3(1.5f, 1.5f, 0.06f));
+      mainShader.setMat4("model", bladeModel);
+      mainShader.setVec2("uvScale", glm::vec2(2.0f, 2.0f));
+      cube.draw(mainShader.ID);
+
+      // Heavy counterweight / central bracket at intersection of arm and blade
+      glm::mat4 bladeCenter = glm::translate(pivot, glm::vec3(0.0f, -3.2f, 0.0f));
+      bladeCenter = glm::scale(bladeCenter, glm::vec3(0.6f, 0.7f, 0.15f));
+      mainShader.setMat4("model", bladeCenter);
+      mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
       cube.draw(mainShader.ID);
     }
 
