@@ -42,7 +42,7 @@ float lastFrame = 0.0f;
 bool bladeActive = true;
 float bladeAngle = 0.0f;
 float bladeTime = 0.0f;
-bool multiViewportMode = true;
+bool multiViewportMode = false;
 
 bool sarcophagusOpen = false;
 float sarcophagusSlide = 0.0f;
