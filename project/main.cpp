@@ -971,6 +971,8 @@ void processInput(GLFWwindow *window) {
   static bool jKeyPressed = false;
   static bool kKeyPressed = false;
   static bool pKeyPressed = false;
+  static bool iKeyPressed = false;
+  static bool oKeyPressed = false;
 
   float doorDistance = glm::length(camera.Position - SIDE_DOOR_HINT_POS);
   sideDoorPlayerNearby = (doorDistance < SIDE_DOOR_HINT_RADIUS);
@@ -1135,6 +1137,34 @@ void processInput(GLFWwindow *window) {
     }
   } else {
     pKeyPressed = false;
+  }
+
+  // Dev shortcut: teleport into the first room (interior) directly.
+  if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
+    if (!iKeyPressed) {
+      inExterior = false;
+      camera.Position = glm::vec3(0.0f, 1.5f, -5.0f);
+      camera.Yaw = -90.0f;
+      camera.Pitch = 0.0f;
+      camera.updateCameraVectors();
+      iKeyPressed = true;
+    }
+  } else {
+    iKeyPressed = false;
+  }
+
+  // Dev shortcut: teleport from interior to exterior (outside main door)
+  if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
+    if (!oKeyPressed) {
+      inExterior = true;
+      camera.Position = glm::vec3(0.0f, CAMERA_EYE_HEIGHT, 60.0f);
+      camera.Yaw = -90.0f; // Look towards the pyramid
+      camera.Pitch = 0.0f;
+      camera.updateCameraVectors();
+      oKeyPressed = true;
+    }
+  } else {
+    oKeyPressed = false;
   }
 
   // Interaction
