@@ -231,14 +231,25 @@ int main() {
     int lightIndex = 0;
     if (inExterior) {
       std::string prefix = "pointLights[0]";
-      mainShader.setVec3(prefix + ".position", glm::vec3(0.0f, 200.0f, 40.0f)); // Sun position
-      mainShader.setVec3(prefix + ".ambient", 0.4f, 0.3f, 0.2f);
+      mainShader.setVec3(prefix + ".position", glm::vec3(50.0f, 200.0f, 40.0f)); // Sun position
+      mainShader.setVec3(prefix + ".ambient", 0.6f, 0.5f, 0.4f);
       mainShader.setVec3(prefix + ".diffuse", 1.2f, 0.9f, 0.7f);
       mainShader.setVec3(prefix + ".specular", 0.5f, 0.4f, 0.3f);
       mainShader.setFloat(prefix + ".constant", 1.0f);
       mainShader.setFloat(prefix + ".linear", 0.0001f);
       mainShader.setFloat(prefix + ".quadratic", 0.0000001f);
-      lightIndex = 1;
+
+      // Fill light from opposite side so shadow faces show texture
+      std::string fill = "pointLights[1]";
+      mainShader.setVec3(fill + ".position", glm::vec3(-150.0f, 100.0f, -100.0f));
+      mainShader.setVec3(fill + ".ambient", 0.15f, 0.12f, 0.1f);
+      mainShader.setVec3(fill + ".diffuse", 0.5f, 0.4f, 0.35f);
+      mainShader.setVec3(fill + ".specular", 0.1f, 0.1f, 0.1f);
+      mainShader.setFloat(fill + ".constant", 1.0f);
+      mainShader.setFloat(fill + ".linear", 0.0001f);
+      mainShader.setFloat(fill + ".quadratic", 0.0000001f);
+
+      lightIndex = 2;
     } else {
     // Lantern point lights with warm fire color (corridor + second room)
     for (int i = 0; i < NUM_LANTERNS; i++, lightIndex++) {
@@ -333,23 +344,60 @@ int main() {
       mainShader.setVec2("uvScale", glm::vec2(30.0f, 30.0f));
       cube.draw(mainShader.ID);
 
-      // Pyramid Geometry
-      glBindTexture(GL_TEXTURE_2D, pyramidTexture);
+      // Pyramid Geometry - draw each step as separate face panels
+      glActiveTexture(GL_TEXTURE0);
       mainShader.setVec3("objectColor", 0.85f, 0.75f, 0.65f);
       float baseSize = 90.0f;
       float heightPerStep = 1.0f;
       int numSteps = 45;
       float stepShrink = baseSize / numSteps;
+      float tileSize = 2.0f;
+      float pyrCenter = -15.0f;
+
       for (int i = 0; i < numSteps; i++) {
         float size = baseSize - i * stepShrink;
         float yPos = i * heightPerStep + heightPerStep * 0.5f;
-        
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, yPos, -15.0f));
-        model = glm::scale(model, glm::vec3(size, heightPerStep, size));
-        mainShader.setMat4("model", model);
-        float tileSize = 2.0f; // each texture tile = 2x2 world units
+        float halfSize = size * 0.5f;
+
+        glBindTexture(GL_TEXTURE_2D, pyramidTexture);
         mainShader.setVec2("uvScale", glm::vec2(size / tileSize, heightPerStep / tileSize));
+
+        // Front face (Z+ side)
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, yPos, pyrCenter + halfSize));
+        model = glm::scale(model, glm::vec3(size, heightPerStep, 0.1f));
+        mainShader.setMat4("model", model);
+        cube.draw(mainShader.ID);
+
+        // Back face (Z- side)
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, yPos, pyrCenter - halfSize));
+        model = glm::scale(model, glm::vec3(size, heightPerStep, 0.1f));
+        mainShader.setMat4("model", model);
+        cube.draw(mainShader.ID);
+
+        // Left face (X- side) - rotated so front face points left
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(-halfSize, yPos, pyrCenter));
+        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(size, heightPerStep, 0.1f));
+        mainShader.setMat4("model", model);
+        cube.draw(mainShader.ID);
+
+        // Right face (X+ side) - rotated so front face points right
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(halfSize, yPos, pyrCenter));
+        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(size, heightPerStep, 0.1f));
+        mainShader.setMat4("model", model);
+        cube.draw(mainShader.ID);
+
+        // Top face (step ledge)
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, yPos + heightPerStep * 0.5f, pyrCenter));
+        model = glm::scale(model, glm::vec3(size, 0.1f, size));
+        mainShader.setMat4("model", model);
+        mainShader.setVec2("uvScale", glm::vec2(size / tileSize, size / tileSize));
         cube.draw(mainShader.ID);
       }
 
