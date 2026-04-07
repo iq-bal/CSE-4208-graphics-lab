@@ -8,12 +8,20 @@ out vec3 FragPos;
 out vec2 TexCoords;
 out vec3 Normal;
 out mat3 TBN;
+out vec3 GouraudColor;
 
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 uniform bool useWaterSurface;
 uniform float waterTime;
+uniform float bezierAmplitude;
+
+// Gouraud shading uniforms
+uniform bool useGouraud;
+uniform vec3 gouraudLightPos;
+uniform vec3 gouraudLightColor;
+uniform vec3 gouraudViewPos;
 
 void main()
 {
@@ -47,7 +55,7 @@ void main()
         float uD = 1.0 - tD;
         float bezD = uD*uD*uD*P0d + 3.0*uD*uD*tD*P1d + 3.0*uD*tD*tD*P2d + tD*tD*tD*P3d;
 
-        localPos.y += bezA + bezB + bezC + bezD;
+        localPos.y += (bezA + bezB + bezC + bezD) * bezierAmplitude;
     }
 
     FragPos = vec3(model * vec4(localPos, 1.0));
@@ -62,6 +70,22 @@ void main()
     vec3 B = cross(N, T);
     
     TBN = mat3(T, B, N);
+
+    // Gouraud shading: calculate lighting per-vertex
+    GouraudColor = vec3(0.0);
+    if (useGouraud) {
+        vec3 norm = normalize(Normal);
+        vec3 lightDir = normalize(gouraudLightPos - FragPos);
+        float diff = max(dot(norm, lightDir), 0.0);
+        vec3 viewDir = normalize(gouraudViewPos - FragPos);
+        vec3 reflectDir = reflect(-lightDir, norm);
+        float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+        
+        vec3 ambient = 0.15 * gouraudLightColor;
+        vec3 diffuse = diff * gouraudLightColor;
+        vec3 specular = spec * gouraudLightColor * 0.5;
+        GouraudColor = ambient + diffuse + specular;
+    }
     
     gl_Position = projection * view * vec4(FragPos, 1.0);
 }

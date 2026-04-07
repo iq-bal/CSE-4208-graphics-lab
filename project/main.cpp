@@ -55,6 +55,28 @@ bool lanternsOn = true;
 // Texture States
 bool texturesEnabled = true;
 
+// === TWEAKABLE GRAPHICS CONCEPT STATES ===
+// Category 1: Geometry & Modeling
+float bezierAmplitude = 1.0f;       // Bezier wave amplitude multiplier
+int   fractalDepth = 4;             // Fractal tree recursion depth (1-6)
+
+// Category 2: Texturing
+// (texturesEnabled already handles simple texture toggle via T)
+// Fragment blend is always active on water; vertex blend is intrinsic
+
+// Category 3: Lighting Sources
+bool directionalLightOn = true;     // Sun / directional exterior light
+bool pointLightsOn = true;          // Lantern point lights
+// (flashlightOn already handles spot light toggle via F)
+
+// Category 4: Shading & Illumination
+bool ambientOn   = true;            // Ambient component
+bool diffuseOn   = true;            // Diffuse component
+bool specularOn  = true;            // Specular component
+float specularPower = 32.0f;        // Phong shininess exponent
+bool  useGouraud = false;           // Gouraud vs Phong shading mode
+float spotConeAngle = 14.0f;        // Spotlight inner cone angle (degrees)
+
 const float CAMERA_EYE_HEIGHT = 1.5f;
 const float CAMERA_MIN_X = -18.2f;
 const float CAMERA_MAX_X = 4.6f;
@@ -308,27 +330,30 @@ int main() {
     // ========== LIGHTING ==========
     int lightIndex = 0;
     if (inExterior) {
-      std::string prefix = "pointLights[0]";
-      mainShader.setVec3(prefix + ".position", glm::vec3(50.0f, 200.0f, 40.0f)); // Sun position
-      mainShader.setVec3(prefix + ".ambient", 0.6f, 0.5f, 0.4f);
-      mainShader.setVec3(prefix + ".diffuse", 1.2f, 0.9f, 0.7f);
-      mainShader.setVec3(prefix + ".specular", 0.5f, 0.4f, 0.3f);
-      mainShader.setFloat(prefix + ".constant", 1.0f);
-      mainShader.setFloat(prefix + ".linear", 0.0001f);
-      mainShader.setFloat(prefix + ".quadratic", 0.0000001f);
+      if (directionalLightOn) {
+        std::string prefix = "pointLights[0]";
+        mainShader.setVec3(prefix + ".position", glm::vec3(50.0f, 200.0f, 40.0f)); // Sun position
+        mainShader.setVec3(prefix + ".ambient", 0.6f, 0.5f, 0.4f);
+        mainShader.setVec3(prefix + ".diffuse", 1.2f, 0.9f, 0.7f);
+        mainShader.setVec3(prefix + ".specular", 0.5f, 0.4f, 0.3f);
+        mainShader.setFloat(prefix + ".constant", 1.0f);
+        mainShader.setFloat(prefix + ".linear", 0.0001f);
+        mainShader.setFloat(prefix + ".quadratic", 0.0000001f);
 
-      // Fill light from opposite side so shadow faces show texture
-      std::string fill = "pointLights[1]";
-      mainShader.setVec3(fill + ".position", glm::vec3(-150.0f, 100.0f, -100.0f));
-      mainShader.setVec3(fill + ".ambient", 0.15f, 0.12f, 0.1f);
-      mainShader.setVec3(fill + ".diffuse", 0.5f, 0.4f, 0.35f);
-      mainShader.setVec3(fill + ".specular", 0.1f, 0.1f, 0.1f);
-      mainShader.setFloat(fill + ".constant", 1.0f);
-      mainShader.setFloat(fill + ".linear", 0.0001f);
-      mainShader.setFloat(fill + ".quadratic", 0.0000001f);
+        // Fill light from opposite side so shadow faces show texture
+        std::string fill = "pointLights[1]";
+        mainShader.setVec3(fill + ".position", glm::vec3(-150.0f, 100.0f, -100.0f));
+        mainShader.setVec3(fill + ".ambient", 0.15f, 0.12f, 0.1f);
+        mainShader.setVec3(fill + ".diffuse", 0.5f, 0.4f, 0.35f);
+        mainShader.setVec3(fill + ".specular", 0.1f, 0.1f, 0.1f);
+        mainShader.setFloat(fill + ".constant", 1.0f);
+        mainShader.setFloat(fill + ".linear", 0.0001f);
+        mainShader.setFloat(fill + ".quadratic", 0.0000001f);
 
-      lightIndex = 2;
+        lightIndex = 2;
+      }
     } else {
+    if (pointLightsOn) {
     // Lantern point lights with warm fire color (corridor + second room)
     for (int i = 0; i < NUM_LANTERNS; i++, lightIndex++) {
       std::string prefix = "pointLights[" + std::to_string(lightIndex) + "]";
@@ -396,6 +421,7 @@ int main() {
       mainShader.setFloat(prefix + ".quadratic", 0.08f);
       lightIndex++;
     }
+    } // end pointLightsOn
     }
 
     mainShader.setInt("numPointLights", lightIndex);
@@ -417,9 +443,27 @@ int main() {
     mainShader.setFloat("spotLight.constant", 1.0f);
     mainShader.setFloat("spotLight.linear", 0.14f);
     mainShader.setFloat("spotLight.quadratic", 0.07f);
-    mainShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(14.0f)));
-    mainShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(18.0f)));
+    mainShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(spotConeAngle)));
+    mainShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(spotConeAngle + 4.0f)));
     mainShader.setBool("spotLightOn", flashlightOn);
+
+    // === TWEAKABLE SHADER UNIFORMS ===
+    mainShader.setBool("ambientOn", ambientOn);
+    mainShader.setBool("diffuseOn", diffuseOn);
+    mainShader.setBool("specularOn", specularOn);
+    mainShader.setFloat("specularPower", specularPower);
+    mainShader.setBool("useGouraud", useGouraud);
+
+    // Gouraud vertex shader uniforms (use primary light source position)
+    if (inExterior) {
+      mainShader.setVec3("gouraudLightPos", glm::vec3(50.0f, 200.0f, 40.0f));
+      mainShader.setVec3("gouraudLightColor", glm::vec3(1.2f, 0.9f, 0.7f));
+    } else {
+      // Use the first lantern as the Gouraud reference light
+      mainShader.setVec3("gouraudLightPos", lanterns[0].position);
+      mainShader.setVec3("gouraudLightColor", glm::vec3(1.0f, 0.55f, 0.15f));
+    }
+    mainShader.setVec3("gouraudViewPos", camPosOutput);
 
     // ========== DRAW SCENE ==========
     mainShader.setBool("useEmissive", false);
@@ -429,6 +473,7 @@ int main() {
     mainShader.setBool("rotateUV90", false);
     mainShader.setBool("useWaterSurface", false);
     mainShader.setFloat("waterTime", currentFrame);
+    mainShader.setFloat("bezierAmplitude", bezierAmplitude);
 
     if (inExterior) {
       // Background Skydome (inverted sphere — no corner seams)
@@ -1316,6 +1361,104 @@ void processInput(GLFWwindow *window) {
     vKeyPressed = false;
   }
 
+  // ========== TWEAKABLE GRAPHICS CONCEPT SHORTCUTS ==========
+  bool ctrl = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+              glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+
+  // --- Category 1: Geometry & Modeling ---
+  // Ctrl+UP / Ctrl+DOWN: Bezier wave amplitude (water surface)
+  if (ctrl && glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+    bezierAmplitude += 2.0f * deltaTime;
+    if (bezierAmplitude > 5.0f) bezierAmplitude = 5.0f;
+  }
+  if (ctrl && glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+    bezierAmplitude -= 2.0f * deltaTime;
+    if (bezierAmplitude < 0.0f) bezierAmplitude = 0.0f;
+  }
+
+  // Ctrl+RIGHT / Ctrl+LEFT: Fractal tree depth (frond density)
+  static bool fracUpPressed = false;
+  static bool fracDownPressed = false;
+  if (ctrl && glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+    if (!fracUpPressed) {
+      fractalDepth = glm::min(fractalDepth + 1, 6);
+      fracUpPressed = true;
+    }
+  } else { fracUpPressed = false; }
+  if (ctrl && glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+    if (!fracDownPressed) {
+      fractalDepth = glm::max(fractalDepth - 1, 1);
+      fracDownPressed = true;
+    }
+  } else { fracDownPressed = false; }
+
+  // --- Category 3: Lighting Sources ---
+  // 1: Toggle Directional Light (Sun)
+  static bool key1Pressed = false;
+  if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
+    if (!key1Pressed) { directionalLightOn = !directionalLightOn; key1Pressed = true; }
+  } else { key1Pressed = false; }
+
+  // 2: Toggle Point Lights (Lanterns)
+  static bool key2Pressed = false;
+  if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
+    if (!key2Pressed) { pointLightsOn = !pointLightsOn; key2Pressed = true; }
+  } else { key2Pressed = false; }
+
+  // 3: Toggle Spot Light (Flashlight) — already F, but 3 adds a second shortcut
+  static bool key3Pressed = false;
+  if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
+    if (!key3Pressed) { flashlightOn = !flashlightOn; key3Pressed = true; }
+  } else { key3Pressed = false; }
+
+  // --- Category 4: Shading & Illumination ---
+  // 4: Toggle Ambient component
+  static bool key4Pressed = false;
+  if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
+    if (!key4Pressed) { ambientOn = !ambientOn; key4Pressed = true; }
+  } else { key4Pressed = false; }
+
+  // 5: Toggle Diffuse component
+  static bool key5Pressed = false;
+  if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) {
+    if (!key5Pressed) { diffuseOn = !diffuseOn; key5Pressed = true; }
+  } else { key5Pressed = false; }
+
+  // 6: Toggle Specular component
+  static bool key6Pressed = false;
+  if (glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS) {
+    if (!key6Pressed) { specularOn = !specularOn; key6Pressed = true; }
+  } else { key6Pressed = false; }
+
+  // 7: Toggle Gouraud vs Phong shading
+  static bool key7Pressed = false;
+  if (glfwGetKey(window, GLFW_KEY_7) == GLFW_PRESS) {
+    if (!key7Pressed) { useGouraud = !useGouraud; key7Pressed = true; }
+  } else { key7Pressed = false; }
+
+  // 8 / 9: Adjust Specular Power (Phong shininess exponent)
+  if (glfwGetKey(window, GLFW_KEY_8) == GLFW_PRESS) {
+    specularPower -= 30.0f * deltaTime;
+    if (specularPower < 2.0f) specularPower = 2.0f;
+  }
+  if (glfwGetKey(window, GLFW_KEY_9) == GLFW_PRESS) {
+    specularPower += 30.0f * deltaTime;
+    if (specularPower > 256.0f) specularPower = 256.0f;
+  }
+
+  // 0: Adjust Spotlight cone angle
+  static bool key0Pressed = false;
+  if (glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS) {
+    if (!key0Pressed) {
+      // Cycle through cone angles: 14 -> 25 -> 40 -> 60 -> 14
+      if (spotConeAngle < 20.0f) spotConeAngle = 25.0f;
+      else if (spotConeAngle < 30.0f) spotConeAngle = 40.0f;
+      else if (spotConeAngle < 50.0f) spotConeAngle = 60.0f;
+      else spotConeAngle = 14.0f;
+      key0Pressed = true;
+    }
+  } else { key0Pressed = false; }
+
   // Interaction
   if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
     if (!eKeyPressed) {
@@ -1815,7 +1958,7 @@ void drawFractalDesertTree(Shader &shader, Cylinder &cyl, Cube &cube,
   shader.setMat4("model", crownCore);
   cyl.draw(shader.ID);
 
-  int frondCount = 24;
+  int frondCount = fractalDepth * 6; // 6 to 36 fronds based on fractalDepth (1-6)
   for (int i = 0; i < frondCount; i++) {
     float n0 = pseudoNoise01(seed * 9.1f + i * 0.77f);
     float n1 = pseudoNoise01(seed * 11.3f + i * 1.21f);
@@ -1840,7 +1983,7 @@ void drawFractalDesertTree(Shader &shader, Cylinder &cyl, Cube &cube,
   }
 
   // Inner crown layer: shorter, more upright fronds for dense date-palm top.
-  int innerFrondCount = 12;
+  int innerFrondCount = fractalDepth * 3; // 3 to 18 inner fronds
   for (int i = 0; i < innerFrondCount; i++) {
     float n0 = pseudoNoise01(seed * 19.1f + i * 0.91f);
     float n1 = pseudoNoise01(seed * 23.3f + i * 1.37f);

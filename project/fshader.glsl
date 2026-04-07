@@ -32,12 +32,20 @@ in vec3 FragPos;
 in vec2 TexCoords;
 in vec3 Normal;
 in mat3 TBN;
+in vec3 GouraudColor;
 
 uniform int numPointLights;
 uniform PointLight pointLights[16]; // Increased limit to 16 lights
 uniform SpotLight spotLight;
 uniform bool spotLightOn;
 uniform bool isDevOrtho;
+
+// Tweakable shading component toggles
+uniform bool ambientOn;
+uniform bool diffuseOn;
+uniform bool specularOn;
+uniform float specularPower;
+uniform bool useGouraud;
 
 uniform vec3 viewPos;
 uniform vec3 objectColor;
@@ -183,20 +191,26 @@ void main()
     
     vec3 result = vec3(0.0);
     
-    // Point Lights
-    for(int i = 0; i < numPointLights; i++)
-        result += CalcPointLight(pointLights[i], norm, FragPos, viewDir, baseColor);
-        
-    // Spot Light (Flashlight/Headlight)
-    if (spotLightOn)
-        result += CalcSpotLight(spotLight, norm, FragPos, viewDir, baseColor);
-     
-    // Ambient fallback if no lights
-    if (numPointLights == 0 && !spotLightOn)
-        result = baseColor * 0.1;
-        
-    if (isDevOrtho) {
-        result += baseColor * 0.45; // Broad global light for architectural developer views
+    if (useGouraud) {
+        // Gouraud mode: use per-vertex interpolated color (calculated in vertex shader)
+        result = GouraudColor * baseColor;
+    } else {
+        // Phong mode: per-fragment lighting (default)
+        // Point Lights
+        for(int i = 0; i < numPointLights; i++)
+            result += CalcPointLight(pointLights[i], norm, FragPos, viewDir, baseColor);
+            
+        // Spot Light (Flashlight/Headlight)
+        if (spotLightOn)
+            result += CalcSpotLight(spotLight, norm, FragPos, viewDir, baseColor);
+         
+        // Ambient fallback if no lights
+        if (numPointLights == 0 && !spotLightOn)
+            result = baseColor * 0.1;
+            
+        if (isDevOrtho) {
+            result += baseColor * 0.45; // Broad global light for architectural developer views
+        }
     }
         
     if (useWaterSurface) {
@@ -232,16 +246,16 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, v
     
     // Specular
     vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), specularPower);
     
     // Attenuation
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));    
     
     // Combine
-    vec3 ambient = light.ambient * color;
-    vec3 diffuse = light.diffuse * diff * color;
-    vec3 specular = light.specular * spec; // Assuming white specularity
+    vec3 ambient = ambientOn ? light.ambient * color : vec3(0.0);
+    vec3 diffuse = diffuseOn ? light.diffuse * diff * color : vec3(0.0);
+    vec3 specular = specularOn ? light.specular * spec : vec3(0.0);
     
     ambient *= attenuation;
     diffuse *= attenuation;
@@ -259,7 +273,7 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec
     
     // Specular
     vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), specularPower);
     
     // Attenuation
     float distance = length(light.position - fragPos);
@@ -271,9 +285,9 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec
     float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
     
     // Combine
-    vec3 ambient = light.ambient * color;
-    vec3 diffuse = light.diffuse * diff * color;
-    vec3 specular = light.specular * spec;
+    vec3 ambient = ambientOn ? light.ambient * color : vec3(0.0);
+    vec3 diffuse = diffuseOn ? light.diffuse * diff * color : vec3(0.0);
+    vec3 specular = specularOn ? light.specular * spec : vec3(0.0);
     
     ambient *= attenuation * intensity;
     diffuse *= attenuation * intensity;
