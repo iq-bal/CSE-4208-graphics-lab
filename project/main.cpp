@@ -765,22 +765,42 @@ int main() {
       mainShader.setVec2("uvScale", glm::vec2(1.0f, 5.0f));
       cube.draw(mainShader.ID);
 
-      // Main Blade (Giant Diamond Shape)
-      glm::mat4 bladeModel = glm::translate(pivot, glm::vec3(0.0f, -3.6f, 0.0f));
-      // Squash it vertically slightly to make it an imposing wedge axe
-      bladeModel = glm::scale(bladeModel, glm::vec3(1.5f, 1.0f, 1.0f));
-      bladeModel = glm::rotate(bladeModel, glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-      bladeModel = glm::scale(bladeModel, glm::vec3(1.5f, 1.5f, 0.06f));
-      mainShader.setMat4("model", bladeModel);
-      mainShader.setVec2("uvScale", glm::vec2(2.0f, 2.0f));
-      cube.draw(mainShader.ID);
-
       // Heavy counterweight / central bracket at intersection of arm and blade
       glm::mat4 bladeCenter = glm::translate(pivot, glm::vec3(0.0f, -3.2f, 0.0f));
       bladeCenter = glm::scale(bladeCenter, glm::vec3(0.6f, 0.7f, 0.15f));
       mainShader.setMat4("model", bladeCenter);
       mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
       cube.draw(mainShader.ID);
+
+      // Main Blade (Constructed via Quadratic Bezier Curve for a perfect sweeping arc)
+      int numSegments = 60;
+      float bladeWidth = 3.8f;
+      float segmentWidth = (bladeWidth / numSegments) * 1.02f; // Slight overlap to prevent gaps
+
+      glm::vec3 p0(-1.9f, -3.2f, 0.0f); // Left tip of the blade
+      glm::vec3 p1( 0.0f, -4.8f, 0.0f); // Bezier Control point pulling the outer edge into a deep arc
+      glm::vec3 p2( 1.9f, -3.2f, 0.0f); // Right tip of the blade
+      
+      for (int i = 0; i <= numSegments; ++i) {
+          float t = (float)i / numSegments;
+          float invT = 1.0f - t;
+          
+          // Evaluate Quadratic Bezier B(t) = (1-t)^2*P0 + 2(1-t)t*P1 + t^2*P2
+          glm::vec3 pt = invT * invT * p0 + 2.0f * invT * t * p1 + t * t * p2;
+          
+          float topY = -3.2f;   // Flat top edge of the blade
+          float bottomY = pt.y; // Curved bottom arc of the blade
+          float height = topY - bottomY;
+          if (height < 0.01f) height = 0.01f;
+          float centerY = topY - height * 0.5f;
+          
+          glm::mat4 sliceModel = glm::translate(pivot, glm::vec3(pt.x, centerY, 0.0f));
+          sliceModel = glm::scale(sliceModel, glm::vec3(segmentWidth, height, 0.06f));
+          mainShader.setMat4("model", sliceModel);
+          // Scale texture mapping so the texture flows across the blade
+          mainShader.setVec2("uvScale", glm::vec2(0.2f, height)); 
+          cube.draw(mainShader.ID);
+      }
     }
 
     // Back wall remains solid; side access is now through the left wall door.
