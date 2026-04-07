@@ -116,7 +116,7 @@ void constrainCameraToTomb();
 
 void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
                      float slideAmount, unsigned int textureID, bool useTexture);
-void drawSecondRoomBurialSet(Shader &shader, Cube &cube, Cylinder &cyl,
+void drawSecondRoomBurialSet(Shader &shader, Cube &cube, Cylinder &cyl, Sphere &sphere,
                              glm::vec3 center, float slideAmount, unsigned int stoneTexture,
                              unsigned int ornamentTexture, unsigned int mummyTexture, bool useTexture);
 void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
@@ -272,7 +272,7 @@ int main() {
       loadTexture("resources/tree_dry_canopy_texture.jpg");
   unsigned int waterTexture = loadTexture("resources/water_texture_hd.jpg");
   unsigned int metalTexture = loadTexture("resources/rusted_metal_texture.png");
-  unsigned int mummyTexture = loadTexture("resources/mummy_texture.png");
+  unsigned int mummyTexture = loadTexture("resources/pharao.jpg");
 
   // Shader config
   mainShader.use();
@@ -307,7 +307,7 @@ int main() {
     }
 
     if (secondTombInteract) {
-      if (secondTombOpen && secondTombSlide < 2.5f)
+      if (secondTombOpen && secondTombSlide < 3.0f)
         secondTombSlide += deltaTime;
       if (!secondTombOpen && secondTombSlide > 0.0f)
         secondTombSlide -= deltaTime;
@@ -1041,7 +1041,7 @@ int main() {
     cube.draw(mainShader.ID);
 
     // Hero burial composition in the second chamber (unlocked by DHARAGOL door).
-    drawSecondRoomBurialSet(mainShader, cube, cylinder,
+    drawSecondRoomBurialSet(mainShader, cube, cylinder, skydome,
                 glm::vec3(-12.0f, -0.95f, -47.5f), secondTombSlide,
                 floorTexture, graveyardTexture, mummyTexture, texturesEnabled);
 
@@ -1691,7 +1691,7 @@ void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
   cube.draw(shader.ID);
 }
 
-void drawSecondRoomBurialSet(Shader &shader, Cube &cube, Cylinder &cyl,
+void drawSecondRoomBurialSet(Shader &shader, Cube &cube, Cylinder &cyl, Sphere &sphere,
                              glm::vec3 center, float slideAmount, unsigned int stoneTexture,
                              unsigned int ornamentTexture, unsigned int mummyTexture, bool useTexture) {
   shader.setBool("rotateUV90", false);
@@ -1769,29 +1769,14 @@ void drawSecondRoomBurialSet(Shader &shader, Cube &cube, Cylinder &cyl,
 
   glm::mat4 coffinLid = glm::mat4(1.0f);
   // Slide the lid along the X axis when opening
-  coffinLid = glm::translate(coffinLid, center + glm::vec3(-0.10f - slideAmount * 0.8f, 1.38f, -0.02f));
+  coffinLid = glm::translate(coffinLid, center + glm::vec3(-0.10f + slideAmount * 0.8f, 1.38f, -0.02f));
   coffinLid = glm::scale(coffinLid, glm::vec3(2.30f, 0.12f, 1.28f));
   shader.setMat4("model", coffinLid);
   shader.setVec2("uvScale", glm::vec2(2.3f, 1.0f));
   cube.draw(shader.ID);
 
-  // The Mummy (drawn inside the coffin Base)
-  if (slideAmount > 0.1f) {
-    shader.setBool("useTexture", useTexture);
-    glBindTexture(GL_TEXTURE_2D, mummyTexture);
-    shader.setVec3("objectColor", 0.7f, 0.65f, 0.5f);
-    glm::mat4 mummyBody = glm::mat4(1.0f);
-    mummyBody = glm::translate(mummyBody, center + glm::vec3(-0.10f, 1.15f, -0.02f));
-    mummyBody = glm::scale(mummyBody, glm::vec3(1.80f, 0.25f, 0.60f));
-    shader.setMat4("model", mummyBody);
-    shader.setVec2("uvScale", glm::vec2(1.0f, 0.5f));
-    cube.draw(shader.ID);
-
-    glm::mat4 mummyHead = glm::mat4(1.0f);
-    mummyHead = glm::translate(mummyHead, center + glm::vec3(0.60f, 1.18f, -0.02f));
-    mummyHead = glm::scale(mummyHead, glm::vec3(0.40f, 0.30f, 0.40f));
-    shader.setMat4("model", mummyHead);
-    cube.draw(shader.ID);
+  // The Mummy (removed for hollow space)
+  if (false && slideAmount > 0.1f) {
   }
 
   // Gold trim strips on coffin
