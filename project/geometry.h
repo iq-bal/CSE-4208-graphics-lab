@@ -273,4 +273,106 @@ public:
   }
 };
 
+// Inverted sphere for skydome (normals point inward)
+class Sphere {
+public:
+  unsigned int VAO, VBO, EBO;
+  int indexCount;
+
+  Sphere(int stacks = 32, int slices = 64) {
+    std::vector<float> vertices;
+    std::vector<unsigned int> indices;
+    float radius = 0.5f;
+    const float PI = 3.14159265359f;
+
+    for (int i = 0; i <= stacks; ++i) {
+      float phi = PI * (float)i / (float)stacks; // 0 to PI (top to bottom)
+      float y = cos(phi) * radius;
+      float ringRadius = sin(phi) * radius;
+
+      for (int j = 0; j <= slices; ++j) {
+        float theta = 2.0f * PI * (float)j / (float)slices;
+        float x = cos(theta) * ringRadius;
+        float z = sin(theta) * ringRadius;
+
+        // Position
+        vertices.push_back(x);
+        vertices.push_back(y);
+        vertices.push_back(z);
+
+        // Normal (pointing INWARD for skydome)
+        vertices.push_back(-x);
+        vertices.push_back(-y);
+        vertices.push_back(-z);
+
+        // Tex coords
+        float u = (float)j / (float)slices;
+        float v = (float)i / (float)stacks;
+        vertices.push_back(u);
+        vertices.push_back(v);
+
+        // Tangent (approximate)
+        vertices.push_back(-sin(theta));
+        vertices.push_back(0.0f);
+        vertices.push_back(cos(theta));
+      }
+    }
+
+    // Indices (reversed winding for inside visibility)
+    for (int i = 0; i < stacks; ++i) {
+      for (int j = 0; j < slices; ++j) {
+        int curr = i * (slices + 1) + j;
+        int next = curr + slices + 1;
+
+        // Triangle 1 (reversed winding)
+        indices.push_back(curr);
+        indices.push_back(curr + 1);
+        indices.push_back(next);
+
+        // Triangle 2 (reversed winding)
+        indices.push_back(next);
+        indices.push_back(curr + 1);
+        indices.push_back(next + 1);
+      }
+    }
+
+    indexCount = indices.size();
+
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0],
+                 GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int),
+                 &indices[0], GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float),
+                          (void *)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float),
+                          (void *)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float),
+                          (void *)(6 * sizeof(float)));
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float),
+                          (void *)(8 * sizeof(float)));
+
+    glBindVertexArray(0);
+  }
+
+  void draw(unsigned int shaderProgram) {
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+  }
+};
+
 #endif

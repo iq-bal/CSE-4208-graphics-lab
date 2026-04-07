@@ -161,6 +161,7 @@ int main() {
   // Geometry
   Cube cube;
   Cylinder cylinder(36);
+  Sphere skydome(48, 96);  // High-res inverted sphere for realistic sky
 
   // Load textures
   unsigned int wallTexture = loadTexture("resources/wall_texture.png");
@@ -172,6 +173,7 @@ int main() {
       loadTexture("resources/graveyard_texture.png");
   unsigned int sandTexture = loadTexture("resources/sand_texture.png");
   unsigned int pyramidTexture = loadTexture("resources/pyramid_texture.png");
+  unsigned int skyTexture = loadTexture("resources/sky_texture_hires.jpg");
 
   // Shader config
   mainShader.use();
@@ -221,7 +223,7 @@ int main() {
     // View/Proj
     glm::mat4 projection =
         glm::perspective(glm::radians(camera.Zoom),
-                         (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+                         (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
     glm::mat4 view = camera.GetViewMatrix();
     mainShader.setMat4("projection", projection);
     mainShader.setMat4("view", view);
@@ -332,11 +334,29 @@ int main() {
     mainShader.setBool("rotateUV90", false);
 
     if (inExterior) {
+      // Background Skydome (inverted sphere — no corner seams)
+      glDepthMask(GL_FALSE);  // Don't write depth so everything draws in front
+      mainShader.setBool("useEmissive", true);
+      mainShader.setBool("useTexture", true);
+      glBindTexture(GL_TEXTURE_2D, skyTexture);
+      glm::mat4 model = glm::mat4(1.0f);
+      // Center the skydome on the camera so the sky appears at infinite distance
+      model = glm::translate(model, camera.Position);
+      model = glm::scale(model, glm::vec3(600.0f, 600.0f, 600.0f));
+      mainShader.setMat4("model", model);
+      // Sphere UV mapping is equirectangular — use full texture, no half-image hack
+      mainShader.setVec2("uvScale", glm::vec2(1.0f, 1.0f));
+      mainShader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
+      skydome.draw(mainShader.ID);
+      glDepthMask(GL_TRUE);   // Restore depth writes for the rest of the scene
+      
+      // Revert states
+      mainShader.setBool("useEmissive", false);
       mainShader.setBool("useTexture", texturesEnabled);
 
       // Sand Ground
       glBindTexture(GL_TEXTURE_2D, sandTexture);
-      glm::mat4 model = glm::mat4(1.0f);
+      model = glm::mat4(1.0f);
       model = glm::translate(model, glm::vec3(0.0f, -0.05f, 0.0f));
       model = glm::scale(model, glm::vec3(300.0f, 0.1f, 300.0f));
       mainShader.setMat4("model", model);

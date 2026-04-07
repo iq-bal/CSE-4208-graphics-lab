@@ -59,8 +59,17 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec
 void main()
 {
     // Emissive objects bypass lighting entirely
+    vec2 emTexCoords = TexCoords * uvScale + uvOffset;
+    if (rotateUV90) {
+        emTexCoords = vec2(emTexCoords.y, 1.0 - emTexCoords.x);
+    }
     if (useEmissive) {
-        FragColor = vec4(emissiveColor, 1.0);
+        if (useTexture) {
+            vec3 texColor = texture(texture1, emTexCoords).rgb;
+            FragColor = vec4(texColor, 1.0);
+        } else {
+            FragColor = vec4(emissiveColor, 1.0);
+        }
         return;
     }
 
