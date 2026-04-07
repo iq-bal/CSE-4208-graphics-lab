@@ -953,6 +953,7 @@ void processInput(GLFWwindow *window) {
   static bool eKeyPressed = false;
   static bool jKeyPressed = false;
   static bool kKeyPressed = false;
+  static bool pKeyPressed = false;
 
   float doorDistance = glm::length(camera.Position - SIDE_DOOR_HINT_POS);
   sideDoorPlayerNearby = (doorDistance < SIDE_DOOR_HINT_RADIUS);
@@ -1004,6 +1005,15 @@ void processInput(GLFWwindow *window) {
     camera.ProcessKeyboard(LEFT, deltaTime);
   if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
     camera.ProcessKeyboard(RIGHT, deltaTime);
+
+  // Vertical movement (fly up/down) — exterior only
+  if (inExterior) {
+    float flySpeed = camera.MovementSpeed * deltaTime;
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+      camera.Position.y += flySpeed;
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+      camera.Position.y -= flySpeed;
+  }
 
   if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
     if (!fKeyPressed) {
@@ -1095,6 +1105,21 @@ void processInput(GLFWwindow *window) {
     kKeyPressed = false;
   }
 
+  // Dev shortcut: teleport to top of main pyramid.
+  if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
+    if (!pKeyPressed) {
+      inExterior = true;
+      // Main pyramid: center (0, -15), 45 steps × 1.0 height = 45 units tall
+      camera.Position = glm::vec3(0.0f, 47.0f, -15.0f);
+      camera.Yaw = -90.0f;
+      camera.Pitch = -15.0f;
+      camera.updateCameraVectors();
+      pKeyPressed = true;
+    }
+  } else {
+    pKeyPressed = false;
+  }
+
   // Interaction
   if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
     if (!eKeyPressed) {
@@ -1127,7 +1152,8 @@ void constrainCameraToTomb() {
   if (inExterior) {
     camera.Position.x = glm::clamp(camera.Position.x, -220.0f, 220.0f);
     camera.Position.z = glm::clamp(camera.Position.z, -170.0f, 190.0f);
-    camera.Position.y = CAMERA_EYE_HEIGHT;
+    // Allow vertical movement but keep above ground
+    camera.Position.y = glm::max(camera.Position.y, CAMERA_EYE_HEIGHT);
     return;
   }
 
