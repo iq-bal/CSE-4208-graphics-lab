@@ -1242,7 +1242,7 @@ void drawDatePalmFrond(Shader &shader, Cube &cube, glm::mat4 crownModel,
                                 glm::vec3(0.0f, 1.0f, 0.0f));
   frame = glm::rotate(frame, glm::radians(-tiltDeg), glm::vec3(1.0f, 0.0f, 0.0f));
 
-  const int segments = 7;
+  const int segments = 9;
   for (int s = 0; s < segments; s++) {
     float t = (float)s / (float)(segments - 1);
     float segLen = length / (float)segments;
@@ -1356,7 +1356,7 @@ void drawFractalDesertTree(Shader &shader, Cylinder &cyl, Cube &cube,
   shader.setMat4("model", crownCore);
   cyl.draw(shader.ID);
 
-  int frondCount = 20;
+  int frondCount = 24;
   for (int i = 0; i < frondCount; i++) {
     float n0 = pseudoNoise01(seed * 9.1f + i * 0.77f);
     float n1 = pseudoNoise01(seed * 11.3f + i * 1.21f);
@@ -1375,6 +1375,24 @@ void drawFractalDesertTree(Shader &shader, Cylinder &cyl, Cube &cube,
       dryFactor = glm::min(1.0f, dryFactor + 0.25f);
       length *= 0.88f;
     }
+
+    drawDatePalmFrond(shader, cube, crown, yaw, tilt, length, width, curve,
+                      dryFactor, canopyTexture, useTexture);
+  }
+
+  // Inner crown layer: shorter, more upright fronds for dense date-palm top.
+  int innerFrondCount = 12;
+  for (int i = 0; i < innerFrondCount; i++) {
+    float n0 = pseudoNoise01(seed * 19.1f + i * 0.91f);
+    float n1 = pseudoNoise01(seed * 23.3f + i * 1.37f);
+    float n2 = pseudoNoise01(seed * 29.7f + i * 1.71f);
+
+    float yaw = (360.0f / (float)innerFrondCount) * i + (n0 - 0.5f) * 16.0f;
+    float tilt = 18.0f + n1 * 14.0f;
+    float length = 0.78f + n2 * 0.34f;
+    float width = 0.12f + n0 * 0.04f;
+    float curve = 2.0f + n1 * 3.0f;
+    float dryFactor = 0.28f + n2 * 0.22f;
 
     drawDatePalmFrond(shader, cube, crown, yaw, tilt, length, width, curve,
                       dryFactor, canopyTexture, useTexture);
