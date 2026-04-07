@@ -48,6 +48,10 @@ bool sarcophagusOpen = false;
 float sarcophagusSlide = 0.0f;
 bool sarcophagusInteract = false;
 
+bool secondTombOpen = false;
+float secondTombSlide = 0.0f;
+bool secondTombInteract = false;
+
 // Lighting States
 bool flashlightOn = true;
 bool lanternsOn = true;
@@ -113,8 +117,8 @@ void constrainCameraToTomb();
 void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
                      float slideAmount, unsigned int textureID, bool useTexture);
 void drawSecondRoomBurialSet(Shader &shader, Cube &cube, Cylinder &cyl,
-                             glm::vec3 center, unsigned int stoneTexture,
-                             unsigned int ornamentTexture, bool useTexture);
+                             glm::vec3 center, float slideAmount, unsigned int stoneTexture,
+                             unsigned int ornamentTexture, unsigned int mummyTexture, bool useTexture);
 void drawLantern(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 model,
                  float time, unsigned int textureID, bool useTexture);
 void drawCamel(Shader &shader, Cube &cube, Cylinder &cyl, glm::mat4 rootModel,
@@ -268,6 +272,7 @@ int main() {
       loadTexture("resources/tree_dry_canopy_texture.jpg");
   unsigned int waterTexture = loadTexture("resources/water_texture_hd.jpg");
   unsigned int metalTexture = loadTexture("resources/rusted_metal_texture.png");
+  unsigned int mummyTexture = loadTexture("resources/mummy_texture.png");
 
   // Shader config
   mainShader.use();
@@ -299,6 +304,13 @@ int main() {
         sarcophagusSlide += deltaTime;
       if (!sarcophagusOpen && sarcophagusSlide > 0.0f)
         sarcophagusSlide -= deltaTime;
+    }
+
+    if (secondTombInteract) {
+      if (secondTombOpen && secondTombSlide < 2.5f)
+        secondTombSlide += deltaTime;
+      if (!secondTombOpen && secondTombSlide > 0.0f)
+        secondTombSlide -= deltaTime;
     }
 
     float targetDoorOpen = sideDoorUnlocked ? 1.0f : 0.0f;
@@ -1030,8 +1042,8 @@ int main() {
 
     // Hero burial composition in the second chamber (unlocked by DHARAGOL door).
     drawSecondRoomBurialSet(mainShader, cube, cylinder,
-                glm::vec3(-12.0f, -0.95f, -47.5f),
-                floorTexture, graveyardTexture, texturesEnabled);
+                glm::vec3(-12.0f, -0.95f, -47.5f), secondTombSlide,
+                floorTexture, graveyardTexture, mummyTexture, texturesEnabled);
 
     // Front wall cap to keep the view enclosed inside the tomb
     model = glm::mat4(1.0f);
@@ -1489,10 +1501,15 @@ void processInput(GLFWwindow *window) {
            camera.updateCameraVectors();
         }
       } else {
-        float dist = glm::length(camera.Position - glm::vec3(0.0f, 0.0f, -20.0f));
-        if (dist < 5.0f) {
+        float dist1 = glm::length(camera.Position - glm::vec3(0.0f, 0.0f, -20.0f));
+        float dist2 = glm::length(camera.Position - glm::vec3(-12.0f, 0.0f, -47.5f));
+        if (dist1 < 5.0f) {
           sarcophagusInteract = true;
           sarcophagusOpen = !sarcophagusOpen; // Toggle
+        } else if (dist2 < 6.0f) {
+          secondTombInteract = true;
+          secondTombOpen = !secondTombOpen;
+          playOneShotAudio("resources/tomb_opening.mp3");
         }
       }
       eKeyPressed = true;
@@ -1675,8 +1692,8 @@ void drawSarcophagus(Shader &shader, Cube &cube, glm::mat4 parentModel,
 }
 
 void drawSecondRoomBurialSet(Shader &shader, Cube &cube, Cylinder &cyl,
-                             glm::vec3 center, unsigned int stoneTexture,
-                             unsigned int ornamentTexture, bool useTexture) {
+                             glm::vec3 center, float slideAmount, unsigned int stoneTexture,
+                             unsigned int ornamentTexture, unsigned int mummyTexture, bool useTexture) {
   shader.setBool("rotateUV90", false);
   shader.setVec2("uvOffset", glm::vec2(0.0f, 0.0f));
 
@@ -1711,19 +1728,71 @@ void drawSecondRoomBurialSet(Shader &shader, Cube &cube, Cylinder &cyl,
   glBindTexture(GL_TEXTURE_2D, ornamentTexture);
   shader.setVec3("objectColor", 0.96f, 0.84f, 0.62f);
 
-  glm::mat4 coffinBase = glm::mat4(1.0f);
-  coffinBase = glm::translate(coffinBase, center + glm::vec3(-0.10f, 1.00f, -0.02f));
-  coffinBase = glm::scale(coffinBase, glm::vec3(2.15f, 0.62f, 1.16f));
-  shader.setMat4("model", coffinBase);
+  // Hollow coffin base (5 panels)
+  // Base Bottom
+  glm::mat4 cBottom = glm::mat4(1.0f);
+  cBottom = glm::translate(cBottom, center + glm::vec3(-0.10f, 0.75f, -0.02f));
+  cBottom = glm::scale(cBottom, glm::vec3(2.15f, 0.12f, 1.16f));
+  shader.setMat4("model", cBottom);
   shader.setVec2("uvScale", glm::vec2(2.2f, 1.2f));
   cube.draw(shader.ID);
 
+  // Front wall (+Z)
+  glm::mat4 cFront = glm::mat4(1.0f);
+  cFront = glm::translate(cFront, center + glm::vec3(-0.10f, 1.06f, 0.50f));
+  cFront = glm::scale(cFront, glm::vec3(2.15f, 0.50f, 0.12f));
+  shader.setMat4("model", cFront);
+  shader.setVec2("uvScale", glm::vec2(2.2f, 0.5f));
+  cube.draw(shader.ID);
+
+  // Back wall (-Z)
+  glm::mat4 cBack = glm::mat4(1.0f);
+  cBack = glm::translate(cBack, center + glm::vec3(-0.10f, 1.06f, -0.54f));
+  cBack = glm::scale(cBack, glm::vec3(2.15f, 0.50f, 0.12f));
+  shader.setMat4("model", cBack);
+  cube.draw(shader.ID);
+
+  // Left wall (-X)
+  glm::mat4 cLeft = glm::mat4(1.0f);
+  cLeft = glm::translate(cLeft, center + glm::vec3(-1.115f, 1.06f, -0.02f));
+  cLeft = glm::scale(cLeft, glm::vec3(0.12f, 0.50f, 0.92f));
+  shader.setMat4("model", cLeft);
+  shader.setVec2("uvScale", glm::vec2(0.9f, 0.5f));
+  cube.draw(shader.ID);
+
+  // Right wall (+X)
+  glm::mat4 cRight = glm::mat4(1.0f);
+  cRight = glm::translate(cRight, center + glm::vec3(0.915f, 1.06f, -0.02f));
+  cRight = glm::scale(cRight, glm::vec3(0.12f, 0.50f, 0.92f));
+  shader.setMat4("model", cRight);
+  cube.draw(shader.ID);
+
   glm::mat4 coffinLid = glm::mat4(1.0f);
-  coffinLid = glm::translate(coffinLid, center + glm::vec3(-0.10f, 1.38f, -0.02f));
+  // Slide the lid along the X axis when opening
+  coffinLid = glm::translate(coffinLid, center + glm::vec3(-0.10f - slideAmount * 0.8f, 1.38f, -0.02f));
   coffinLid = glm::scale(coffinLid, glm::vec3(2.30f, 0.12f, 1.28f));
   shader.setMat4("model", coffinLid);
   shader.setVec2("uvScale", glm::vec2(2.3f, 1.0f));
   cube.draw(shader.ID);
+
+  // The Mummy (drawn inside the coffin Base)
+  if (slideAmount > 0.1f) {
+    shader.setBool("useTexture", useTexture);
+    glBindTexture(GL_TEXTURE_2D, mummyTexture);
+    shader.setVec3("objectColor", 0.7f, 0.65f, 0.5f);
+    glm::mat4 mummyBody = glm::mat4(1.0f);
+    mummyBody = glm::translate(mummyBody, center + glm::vec3(-0.10f, 1.15f, -0.02f));
+    mummyBody = glm::scale(mummyBody, glm::vec3(1.80f, 0.25f, 0.60f));
+    shader.setMat4("model", mummyBody);
+    shader.setVec2("uvScale", glm::vec2(1.0f, 0.5f));
+    cube.draw(shader.ID);
+
+    glm::mat4 mummyHead = glm::mat4(1.0f);
+    mummyHead = glm::translate(mummyHead, center + glm::vec3(0.60f, 1.18f, -0.02f));
+    mummyHead = glm::scale(mummyHead, glm::vec3(0.40f, 0.30f, 0.40f));
+    shader.setMat4("model", mummyHead);
+    cube.draw(shader.ID);
+  }
 
   // Gold trim strips on coffin
   shader.setBool("useTexture", false);

@@ -9,4 +9,7 @@ void startBackgroundMusic(const char *filePath);
 // Stop the background music.
 void stopBackgroundMusic();
 
+// Play a one-shot sound effect.
+void playOneShotAudio(const char *filePath);
+
 #endif // AUDIO_H

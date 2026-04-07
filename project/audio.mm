@@ -39,3 +39,32 @@ void stopBackgroundMusic() {
     bgPlayer = nil;
   }
 }
+
+static AVAudioPlayer *effectPlayer = nil;
+
+void playOneShotAudio(const char *filePath) {
+  @autoreleasepool {
+    NSString *path = [NSString stringWithUTF8String:filePath];
+
+    NSURL *url = nil;
+    if ([path hasPrefix:@"/"]) {
+      url = [NSURL fileURLWithPath:path];
+    } else {
+      NSString *cwd = [[NSFileManager defaultManager] currentDirectoryPath];
+      NSString *full = [cwd stringByAppendingPathComponent:path];
+      url = [NSURL fileURLWithPath:full];
+    }
+
+    NSError *error = nil;
+    effectPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:url error:&error];
+    if (error) {
+      NSLog(@"[Audio] Failed to load %@: %@", path, error.localizedDescription);
+      return;
+    }
+
+    effectPlayer.numberOfLoops = 0; // Play once
+    effectPlayer.volume = 1.0f;
+    [effectPlayer prepareToPlay];
+    [effectPlayer play];
+  }
+}
